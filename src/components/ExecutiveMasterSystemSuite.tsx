@@ -43,6 +43,7 @@ import { AdminDeviceManagerView } from "./AdminDeviceManagerView";
 import { SystemPromptsHistoryDashboard } from "./SystemPromptsHistoryDashboard";
 import { SystemAuditReportView } from "./SystemAuditReportView";
 import { SapUniversalSearchModal } from "./SapUniversalSearchModal";
+import { SystemDeployCard } from "./SystemDeployCard";
 import { Search } from "lucide-react";
 import { ERPState, SystemSettings } from "../types/erp";
 import { soundService, SoundType, WhatsAppNotificationPayload } from "../services/notificationSoundService";
@@ -595,6 +596,9 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
               </span>
             </div>
           </div>
+
+          {/* Sovereign Release & Deployment Pipeline Cards */}
+          <SystemDeployCard forceAdminView={true} onTriggerInstantDeploy={handleVerifyUpdate} />
 
           {/* Official Domain & Architecture Card */}
           <div className="p-6 rounded-3xl bg-slate-900/95 border border-slate-800 space-y-5 shadow-xl">

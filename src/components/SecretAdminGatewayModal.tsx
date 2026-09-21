@@ -43,6 +43,7 @@ import { getStored200Tenants, PreGeneratedTenant } from "../data/preGeneratedTen
 import { soundService } from "../services/notificationSoundService";
 import { SaaSRegistrationPortal } from "./SaaSRegistrationPortal";
 import { SapUniversalSearchModal } from "./SapUniversalSearchModal";
+import { SystemDeployCard } from "./SystemDeployCard";
 
 // Seeded pseudo-random monthly activity generator for elegant Sparkline charts
 function getTenantSparklineData(tenantId: string): number[] {
@@ -83,7 +84,7 @@ export const SecretAdminGatewayModal: React.FC<SecretAdminGatewayModalProps> = (
   const [isPending, startTransition] = useTransition();
 
   // Navigation & Advanced Search State inside SecretAdminGatewayModal
-  const [activeGatewayTab, setActiveGatewayTab] = useState<"AUTH" | "ADVANCED_SEARCH">("AUTH");
+  const [activeGatewayTab, setActiveGatewayTab] = useState<"AUTH" | "ADVANCED_SEARCH" | "DEPLOY_PIPELINE">("AUTH");
   const [tenantSearchQuery, setTenantSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "TRIAL" | "PAID">("ALL");
   const [storedTenants, setStoredTenants] = useState<PreGeneratedTenant[]>([]);
@@ -397,32 +398,45 @@ export const SecretAdminGatewayModal: React.FC<SecretAdminGatewayModalProps> = (
           </div>
         </div>
 
-        {/* TAB SWITCHER: 🔐 المصادقة والتحقق • 🔍 شريط البحث المتقدم عن المنشآت */}
-        <div className="flex items-center justify-center gap-2 p-1 bg-slate-900/90 border border-blue-500/30 rounded-2xl mb-5 shadow-inner">
+        {/* TAB SWITCHER: 🔐 المصادقة والتحقق • 🔍 شريط البحث المتقدم عن المنشآت • 🚀 معلومات الإصدار وخطوات النشر */}
+        <div className="flex items-center justify-center gap-1.5 p-1 bg-slate-900/90 border border-blue-500/30 rounded-2xl mb-5 shadow-inner flex-wrap">
           <button
             type="button"
             onClick={() => setActiveGatewayTab("AUTH")}
-            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 min-w-[130px] py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeGatewayTab === "AUTH"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md border border-blue-400/40 font-black"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
             }`}
           >
             <ShieldCheck className="w-4 h-4 text-blue-300" />
-            <span>🔐 المصادقة والتحقق السيادي</span>
+            <span>🔐 المصادقة السيادية</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveGatewayTab("ADVANCED_SEARCH")}
-            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 min-w-[150px] py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeGatewayTab === "ADVANCED_SEARCH"
                 ? "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-slate-950 font-black shadow-md border border-amber-300"
                 : "text-amber-300 hover:bg-amber-950/40"
             }`}
           >
             <Search className="w-4 h-4 text-amber-300" />
-            <span>🔍 شريط البحث المتقدم في المنشآت (200+)</span>
+            <span>🔍 البحث في المنشآت (200+)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveGatewayTab("DEPLOY_PIPELINE")}
+            className={`flex-1 min-w-[150px] py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeGatewayTab === "DEPLOY_PIPELINE"
+                ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white font-black shadow-md border border-emerald-400"
+                : "text-emerald-300 hover:bg-emerald-950/40"
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-emerald-300" />
+            <span>🚀 الإصدار وخطوات النشر</span>
           </button>
         </div>
 
@@ -1092,6 +1106,20 @@ export const SecretAdminGatewayModal: React.FC<SecretAdminGatewayModalProps> = (
               </p>
               <p className="font-mono text-blue-300 font-bold">{MASTER_ADMIN_EMAIL}</p>
             </div>
+          </div>
+        )}
+
+        {/* TAB 3: SOVEREIGN RELEASE CARD & DEPLOYMENT PIPELINE */}
+        {activeGatewayTab === "DEPLOY_PIPELINE" && (
+          <div className="flex-1 overflow-y-auto space-y-4 max-h-[500px] custom-scrollbar animate-fadeIn p-1">
+            <SystemDeployCard
+              forceAdminView={true}
+              onTriggerInstantDeploy={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new Event("open_instant_deploy"));
+                }
+              }}
+            />
           </div>
         )}
       </div>

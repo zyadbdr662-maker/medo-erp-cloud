@@ -3,6 +3,7 @@ import { BzmtLogo } from "./BzmtLogo";
 import { Scale, ShieldCheck, Lock, RotateCcw, Cookie, FileText, CheckCircle2, Radio, Copy, Check, ExternalLink, Rocket, RefreshCw, GitBranch, Server, Globe } from "lucide-react";
 import { OFFICIAL_APP_DOMAIN, OFFICIAL_APP_VERSION, OFFICIAL_BUILD_NUMBER, OFFICIAL_RELEASE_DATE, OFFICIAL_CUSTOM_DOMAIN } from "../config/appConfig";
 import { liveDeploymentSyncService, LiveDeploymentStatus } from "../services/liveDeploymentSyncService";
+import { SystemDeployCard } from "./SystemDeployCard";
 
 export type LegalDocTab = "TERMS" | "PRIVACY" | "DISCLAIMER" | "REFUND" | "COOKIES";
 
@@ -192,8 +193,8 @@ export const SystemFooter: React.FC<SystemFooterProps> = ({
         id="system-main-footer"
         className={`w-full border-t border-slate-800/80 bg-[#0a2540] text-slate-400 select-none transition-colors py-4 px-4 text-[11px] space-y-4 ${className}`}
       >
-        {/* Always display the deployment metadata card */}
-        <DeploymentMetadataCard isCompact={true} onOpenInstantDeploy={onOpenInstantDeploy} />
+        {/* Always display the deployment metadata card or client icons conditionally */}
+        <SystemDeployCard onTriggerInstantDeploy={onOpenInstantDeploy} />
 
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-800/60">
           <div className="flex items-center gap-2.5 flex-wrap justify-center lg:justify-start font-medium">
@@ -334,8 +335,8 @@ export const SystemFooter: React.FC<SystemFooterProps> = ({
 
       {/* Deployment & Version Metadata Block - Placed with high prominence */}
       <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-slate-800/80 space-y-8">
-        {/* Prominent Metadata Card with Live Deployment Status Box */}
-        <DeploymentMetadataCard onOpenInstantDeploy={onOpenInstantDeploy} />
+        {/* Prominent Metadata Card with Live Deployment Status Box or Client Icons */}
+        <SystemDeployCard onTriggerInstantDeploy={onOpenInstantDeploy} />
 
         {/* Social Icons - Centered */}
         <div className="flex items-center justify-center gap-[20px] text-2xl">
