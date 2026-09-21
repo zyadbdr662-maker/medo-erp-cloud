@@ -17,6 +17,7 @@ import { PurchasesAndReturnsView } from "./components/PurchasesAndReturnsView";
 import { FinancialReportsView } from "./components/FinancialReportsView";
 import { CostCentersAndAssetsView } from "./components/CostCentersAndAssetsView";
 import { FixedAssetsModule } from "./components/FixedAssetsModule";
+import { CostAccountingView } from "./components/CostAccountingView";
 import { CurrencySettingsView } from "./components/CurrencySettingsView";
 import { GeneralLedgerView } from "./components/GeneralLedgerView";
 import { SystemSettingsView } from "./components/SystemSettingsView";
@@ -2849,6 +2850,14 @@ export default function App() {
                   onTransferAsset={handleTransferFixedAsset}
                   onAddMaintenance={handleAddAssetMaintenance}
                   onDisposeAsset={handleDisposeFixedAsset}
+                />
+              )}
+              {activeTab === "COST_ACCOUNTING" && (
+                <CostAccountingView
+                  onPostJournalEntry={(entry) => {
+                    const newEntries = [entry, ...erpState.journalEntries];
+                    updateStateWithRecalculatedGL({ journalEntries: newEntries });
+                  }}
                 />
               )}
               {activeTab === "PARTNERS" && (

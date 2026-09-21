@@ -19,6 +19,7 @@ import {
   Trash2,
   FileText,
 } from "lucide-react";
+import { TenantIsolationService } from "../../services/tenantIsolationService";
 import {
   Partner,
   PartnerContribution,
@@ -132,7 +133,7 @@ export const PartnersDirectoryTab: React.FC<PartnersDirectoryTabProps> = ({
             {partners.length} <span className="text-xs font-normal text-slate-400">شركاء</span>
           </div>
           <div className="text-[11px] text-slate-400 mt-1">
-            مجموعة بن زياد التجارية وميدو تك
+            {TenantIsolationService.getActiveTenantDetails()?.nameAr || "مجموعة بن زياد"}
           </div>
         </div>
 

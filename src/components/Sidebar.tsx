@@ -41,6 +41,7 @@ import {
   Archive,
   Scale,
   Handshake,
+  Calculator,
 } from "lucide-react";
 import { PWAInstallButton } from "./PWAInstallButton";
 import { BzmtLogo } from "./BzmtLogo";
@@ -68,6 +69,7 @@ export type NavTab =
   | "BRANCH_MANAGEMENT"
   | "FIXED_ASSETS"
   | "COST_CENTERS"
+  | "COST_ACCOUNTING"
   | "PARTNERS"
   | "EXPENSES_AND_REVENUES"
   | "HUMAN_RESOURCES"
@@ -336,6 +338,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       labelAr: "مراكز التكلفة (CO)",
       labelEn: "Cost Centers & Allocation",
       icon: PieChart,
+      section: "إدارة الأصول والتكاليف",
+    },
+    {
+      id: "COST_ACCOUNTING",
+      labelAr: "محاسبة التكاليف الشاملة",
+      labelEn: "Cost Accounting (Job/ABC/Std)",
+      icon: Calculator,
+      badge: "SAP CO 📊",
+      badgeColor: "bg-emerald-950 text-emerald-300 border border-emerald-700/50 font-bold",
       section: "إدارة الأصول والتكاليف",
     },
     {

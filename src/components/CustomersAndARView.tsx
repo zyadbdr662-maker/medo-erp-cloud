@@ -19,6 +19,7 @@ import {
   Share2,
   Upload,
 } from "lucide-react";
+import { TenantIsolationService } from "../services/tenantIsolationService";
 import {
   Account,
   CurrencyCode,
@@ -1289,8 +1290,12 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
                   * يتم احتساب الرصيد التراكمي آلياً على أساس تسلسلي زمني لكافة المعاملات.
                 </p>
                 <div className="flex items-center gap-2">
-                  <button
+                   <button
                     onClick={() => {
+                      const tenantDetails = TenantIsolationService.getActiveTenantDetails();
+                      const companyName = tenantDetails?.nameAr || "مجموعة بن زياد التجارية";
+                      const tenantId = TenantIsolationService.resolveActiveTenant();
+
                       // Custom print window or open browser print layout
                       const printContent = `
                         <html>
@@ -1309,11 +1314,11 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
                               td { padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: right; }
                               .text-left { text-align: left; }
                               .bold { font-weight: bold; }
-                              .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #888; border-top: 1px solid #eee; padding-top: 15px; }
+                              .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #555; border-top: 1px solid #ddd; padding-top: 15px; font-family: monospace; }
                             </style>
                           </head>
                           <body>
-                            <h2>مجموعة بن زياد التجارية المتحدة</h2>
+                            <h2>${companyName}</h2>
                             <h3 style="text-align: center; margin-top: 0; color: #444;">كشف حساب تفصيلي للعميل</h3>
                             <div class="header-info">
                               العميل: <strong>${selectedCustomerForStatement.nameAr}</strong> | 
@@ -1365,7 +1370,7 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
                             </table>
                             
                             <div class="footer">
-                              نظام MeDo ERP للمحاسبة السحابية المتكاملة — تم التوليد وإصدار السند آلياً مع حماية التوقيع الرقمي.
+                              🏢 المنشأة: ${companyName} | 🔢 المعرّف: ${tenantId} | 📅 التاريخ: ${new Date().toLocaleDateString("ar-SA")}
                             </div>
                           </body>
                         </html>

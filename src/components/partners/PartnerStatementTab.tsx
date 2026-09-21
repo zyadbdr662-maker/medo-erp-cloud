@@ -19,6 +19,7 @@ import {
   CurrencyCode,
 } from "../../types/erp";
 import { formatMoney } from "../../services/erpStorage";
+import { TenantIsolationService } from "../../services/tenantIsolationService";
 
 interface PartnerStatementTabProps {
   partners: Partner[];
@@ -53,6 +54,7 @@ export const PartnerStatementTab: React.FC<PartnerStatementTabProps> = ({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   const selectedPartner = partners.find((p) => p.id === partnerId);
+  const tenantDetails = TenantIsolationService.getActiveTenantDetails();
 
   // Build ledger movements
   const entries: StatementEntry[] = [];
@@ -318,8 +320,8 @@ export const PartnerStatementTab: React.FC<PartnerStatementTabProps> = ({
           <div className="bg-white text-slate-900 rounded-2xl w-full max-w-3xl p-8 overflow-y-auto max-h-[92vh] shadow-2xl relative font-sans">
             {/* Header */}
             <div className="text-center border-b-2 border-slate-900 pb-4 mb-6">
-              <h1 className="text-xl font-black">مجموعة بن زياد التجارية - ميدو تك</h1>
-              <p className="text-xs text-slate-600 mt-0.5">الإدارة العامة والسيادية • الشؤون المالية والحسابات</p>
+              <h1 className="text-xl font-black">{tenantDetails?.nameAr || "مجموعة بن زياد التجارية"}</h1>
+              <p className="text-xs text-slate-600 mt-0.5">{tenantDetails?.address || "الإدارة العامة والسيادية"} {tenantDetails?.phone ? `• هاتف: ${tenantDetails.phone}` : ""}</p>
               <h2 className="text-base font-black text-emerald-800 mt-2">كشف حساب الشريك الجاري</h2>
               <div className="flex justify-between items-center text-xs font-bold text-slate-700 mt-2 px-4">
                 <span>اسم الشريك: {selectedPartner.name}</span>
@@ -386,6 +388,11 @@ export const PartnerStatementTab: React.FC<PartnerStatementTabProps> = ({
                 <p className="text-slate-600 mb-8">توقيع ومصادقة الشريك</p>
                 <p className="border-t border-slate-400 pt-1">{selectedPartner.name}</p>
               </div>
+            </div>
+
+            {/* Tenant Isolation Footer */}
+            <div className="mt-6 pt-3 border-t border-slate-200 text-center text-[11px] text-slate-500 font-mono">
+              🏢 المنشأة: {tenantDetails?.nameAr || "المنشأة النشطة"} | 🔢 المعرّف: {TenantIsolationService.resolveActiveTenant()} | 📅 التاريخ: {new Date().toLocaleDateString("ar-SA")}
             </div>
 
             {/* Print Modal Buttons */}

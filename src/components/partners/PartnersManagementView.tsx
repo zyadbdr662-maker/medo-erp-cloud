@@ -27,6 +27,7 @@ import {
 } from "../../types/erp";
 import { formatMoney } from "../../services/erpStorage";
 import { soundService } from "../../services/notificationSoundService";
+import { TenantIsolationService } from "../../services/tenantIsolationService";
 import { PartnersDirectoryTab } from "./PartnersDirectoryTab";
 import { ProfitDistributionTab } from "./ProfitDistributionTab";
 import { PartnerStatementTab } from "./PartnerStatementTab";
@@ -460,7 +461,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                 إدارة الشراكات والشركاء وتوزيع الأرباح
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                مجموعة بن زياد • ميدو تك
+                {TenantIsolationService.getActiveTenantDetails()?.nameAr || "مجموعة بن زياد"}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">

@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   ChevronDown,
 } from "lucide-react";
+import { TenantIsolationService } from "../../services/tenantIsolationService";
 import {
   Partner,
   ProfitDistribution,
@@ -460,8 +461,8 @@ export const ProfitDistributionTab: React.FC<ProfitDistributionTabProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white text-slate-900 rounded-2xl w-full max-w-2xl p-8 overflow-y-auto max-h-[92vh] shadow-2xl relative font-sans">
             <div className="text-center border-b-2 border-slate-900 pb-4 mb-6">
-              <h1 className="text-xl font-black">مجموعة بن زياد التجارية - ميدو تك</h1>
-              <p className="text-xs text-slate-600 mt-1">الجمهورية اليمنية • الإدارة العامة والسيادية</p>
+              <h1 className="text-xl font-black">{TenantIsolationService.getActiveTenantDetails()?.nameAr || "مجموعة بن زياد التجارية"}</h1>
+              <p className="text-xs text-slate-600 mt-1">{TenantIsolationService.getActiveTenantDetails()?.address || "الجمهورية اليمنية"} • الإدارة العامة والسيادية</p>
               <h2 className="text-base font-bold text-emerald-800 mt-3">
                 قرار مجلس الإدارة رقم ({selectedDistForPrint.fiscalYear}/01)
               </h2>
@@ -513,6 +514,11 @@ export const ProfitDistributionTab: React.FC<ProfitDistributionTabProps> = ({
                   <p className="border-t border-slate-400 pt-1">الأستاذ بدر عايض محمد</p>
                 </div>
               </div>
+            </div>
+
+            {/* Tenant Isolation Footer */}
+            <div className="mt-6 pt-3 border-t border-slate-200 text-center text-[11px] text-slate-500 font-mono">
+              🏢 المنشأة: {TenantIsolationService.getActiveTenantDetails()?.nameAr || "المنشأة النشطة"} | 🔢 المعرّف: {TenantIsolationService.resolveActiveTenant()} | 📅 التاريخ: {new Date().toLocaleDateString("ar-SA")}
             </div>
 
             <div className="mt-6 pt-4 border-t border-slate-200 flex items-center justify-end gap-3 print:hidden">
