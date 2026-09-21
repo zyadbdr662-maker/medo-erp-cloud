@@ -727,6 +727,11 @@ export interface ERPState {
   // --- وحدة الصرافة والتحويلات الداخلية وإدارة ودائع وأمانات العملاء ---
   exchangeAccounts?: ExchangeAccount[];
   exchangeTransactions?: ExchangeTransaction[];
+  // --- وحدة الشراكات والشركاء وإدارة رؤوس الأموال والأرباح (Partnerships & Equity) ---
+  partners?: Partner[];
+  partnerContributions?: PartnerContribution[];
+  profitDistributions?: ProfitDistribution[];
+  partnerWithdrawals?: PartnerWithdrawal[];
 }
 
 export type ExchangeTransactionType =
@@ -1334,5 +1339,96 @@ export interface AdminManualTopic {
   summary: string;
   contentMarkdown: string;
 }
+
+// ==========================================
+// وحدة الشراكات والشركاء (Partners & Partnerships)
+// ==========================================
+
+export type PartnerType =
+  | "MAIN"         // شريك رئيسي (مسؤولية كاملة)
+  | "GENERAL"      // شريك عادي (متضامن)
+  | "LIMITED"      // شريك موصي (لا يشارك في الإدارة، مسؤولية محدودة)
+  | "WORKING"      // شريك عامل (يعمل في الشركة)
+  | "SILENT"       // شريك صامت (لا يعمل)
+  | "SHAREHOLDER"; // مساهم
+
+export type PartnerContributionType =
+  | "CASH"        // نقدية (مبالغ نقدية / تحويل بنكي)
+  | "IN_KIND"     // عينية (أصول، سيارات، عقارات، معدات)
+  | "INTANGIBLE"  // معنوية (خبرة، علاقات، علامة تجارية)
+  | "REAL_ESTATE" // عقارية (أراضي، مبانٍ)
+  | "SHARES";     // أسهم (أسهم في شركات أخرى)
+
+export interface Partner {
+  id: string;
+  name: string;
+  nameEn?: string;
+  idNumber: string;
+  phone: string;
+  email: string;
+  address: string;
+  partnerType: PartnerType;
+  sharePercentage: number;   // e.g. 40 for 40%
+  capitalAmount: number;     // إجمالي رأس المال المكتتب به
+  paidCapital: number;       // رأس المال المدفوع
+  remainingCapital: number;  // رأس المال المتبقي
+  joinDate: string;          // YYYY-MM-DD
+  isActive: boolean;
+  notes?: string;
+  currency?: CurrencyCode;
+  createdAt?: string;
+}
+
+export interface PartnerContribution {
+  id: string;
+  partnerId: string;
+  partnerName: string;
+  contributionType: PartnerContributionType;
+  amount: number;
+  date: string;
+  description: string;
+  status: "PAID" | "PENDING";
+  assetDetails?: string;
+  referenceAccount?: string;
+  journalEntryId?: string;
+}
+
+export interface PartnerProfitShare {
+  partnerId: string;
+  partnerName: string;
+  sharePercentage: number;
+  profitAmount: number;
+  status: "PENDING" | "PAID";
+  paidDate?: string;
+  notes?: string;
+}
+
+export interface ProfitDistribution {
+  id: string;
+  fiscalYear: number;
+  totalProfit: number;
+  reservedPercentage: number;  // نسبة الاحتياطي / الأرباح المحتجزة (مثلاً 20%)
+  reservedAmount: number;      // مبلغ الاحتياطي
+  distributableAmount: number; // الأرباح القابلة للتوزيع
+  distributionDate: string;
+  status: "PENDING" | "APPROVED" | "PAID";
+  shares: PartnerProfitShare[];
+  notes?: string;
+  journalEntryId?: string;
+  createdBy?: string;
+}
+
+export interface PartnerWithdrawal {
+  id: string;
+  partnerId: string;
+  partnerName: string;
+  amount: number;
+  date: string;
+  description: string;
+  paymentMethod: "CASH" | "BANK";
+  status: "PAID" | "PENDING";
+  journalEntryId?: string;
+}
+
 
 

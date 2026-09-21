@@ -35,6 +35,10 @@ import {
   ExchangeAccount,
   ExchangeTransaction,
   SaaSClient,
+  Partner,
+  PartnerContribution,
+  ProfitDistribution,
+  PartnerWithdrawal,
 } from "../types/erp";
 import {
   INITIAL_ACCOUNTS,
@@ -71,6 +75,13 @@ import {
   INITIAL_EXCHANGE_TRANSACTIONS,
   INITIAL_SAAS_CLIENTS,
 } from "../data/initialERPData";
+
+import {
+  INITIAL_PARTNERS,
+  INITIAL_PARTNER_CONTRIBUTIONS,
+  INITIAL_PROFIT_DISTRIBUTIONS,
+  INITIAL_PARTNER_WITHDRAWALS,
+} from "../data/initialPartnersData";
 
 import { TenantIsolationService, KNOWN_TENANTS } from "./tenantIsolationService";
 import { getMockTrialState } from "../data/mockTrialData";
@@ -239,6 +250,10 @@ export const STORAGE_KEYS = {
   EXCHANGE_ACCOUNTS: "medo_erp_exchange_accounts_v1",
   EXCHANGE_TRANSACTIONS: "medo_erp_exchange_transactions_v1",
   SAAS_CLIENTS: "medo_erp_saas_clients_v1",
+  PARTNERS: "medo_erp_partners_v1",
+  PARTNER_CONTRIBUTIONS: "medo_erp_partner_contributions_v1",
+  PROFIT_DISTRIBUTIONS: "medo_erp_profit_distributions_v1",
+  PARTNER_WITHDRAWALS: "medo_erp_partner_withdrawals_v1",
 };
 
 /**
@@ -292,6 +307,10 @@ export interface ERPFullState {
   exchangeAccounts?: ExchangeAccount[];
   exchangeTransactions?: ExchangeTransaction[];
   saasClients?: SaaSClient[];
+  partners?: Partner[];
+  partnerContributions?: PartnerContribution[];
+  profitDistributions?: ProfitDistribution[];
+  partnerWithdrawals?: PartnerWithdrawal[];
 }
 
 export function loadERPState(overrideTenant?: string): ERPFullState {
@@ -627,6 +646,18 @@ export function loadERPState(overrideTenant?: string): ERPFullState {
     const rawSaasClients = localStorage.getItem(getStorageKey("SAAS_CLIENTS", activeTenant));
     const saasClients: SaaSClient[] = rawSaasClients ? JSON.parse(rawSaasClients) : (activeTenant === "albadr-pharma-2026" ? [] : INITIAL_SAAS_CLIENTS);
 
+    const rawPartners = localStorage.getItem(getStorageKey("PARTNERS", activeTenant));
+    const partners: Partner[] = rawPartners ? JSON.parse(rawPartners) : (activeTenant === "albadr-pharma-2026" ? [] : INITIAL_PARTNERS);
+
+    const rawPartnerContribs = localStorage.getItem(getStorageKey("PARTNER_CONTRIBUTIONS", activeTenant));
+    const partnerContributions: PartnerContribution[] = rawPartnerContribs ? JSON.parse(rawPartnerContribs) : (activeTenant === "albadr-pharma-2026" ? [] : INITIAL_PARTNER_CONTRIBUTIONS);
+
+    const rawProfitDistributions = localStorage.getItem(getStorageKey("PROFIT_DISTRIBUTIONS", activeTenant));
+    const profitDistributions: ProfitDistribution[] = rawProfitDistributions ? JSON.parse(rawProfitDistributions) : (activeTenant === "albadr-pharma-2026" ? [] : INITIAL_PROFIT_DISTRIBUTIONS);
+
+    const rawPartnerWithdrawals = localStorage.getItem(getStorageKey("PARTNER_WITHDRAWALS", activeTenant));
+    const partnerWithdrawals: PartnerWithdrawal[] = rawPartnerWithdrawals ? JSON.parse(rawPartnerWithdrawals) : (activeTenant === "albadr-pharma-2026" ? [] : INITIAL_PARTNER_WITHDRAWALS);
+
     return {
       branches,
       activeBranchId,
@@ -666,6 +697,10 @@ export function loadERPState(overrideTenant?: string): ERPFullState {
       exchangeAccounts,
       exchangeTransactions,
       saasClients,
+      partners,
+      partnerContributions,
+      profitDistributions,
+      partnerWithdrawals,
     };
   } catch (error) {
     console.error("Failed to load ERP state from localStorage:", error);
@@ -707,6 +742,10 @@ export function loadERPState(overrideTenant?: string): ERPFullState {
       exchangeAccounts: INITIAL_EXCHANGE_ACCOUNTS,
       exchangeTransactions: INITIAL_EXCHANGE_TRANSACTIONS,
       saasClients: INITIAL_SAAS_CLIENTS,
+      partners: INITIAL_PARTNERS,
+      partnerContributions: INITIAL_PARTNER_CONTRIBUTIONS,
+      profitDistributions: INITIAL_PROFIT_DISTRIBUTIONS,
+      partnerWithdrawals: INITIAL_PARTNER_WITHDRAWALS,
     };
     return fallback;
   }
@@ -752,6 +791,10 @@ export function saveERPState(state: Partial<ERPFullState>, overrideTenant?: stri
     if (state.exchangeAccounts) localStorage.setItem(getStorageKey("EXCHANGE_ACCOUNTS", activeTenant), JSON.stringify(state.exchangeAccounts));
     if (state.exchangeTransactions) localStorage.setItem(getStorageKey("EXCHANGE_TRANSACTIONS", activeTenant), JSON.stringify(state.exchangeTransactions));
     if (state.saasClients) localStorage.setItem(getStorageKey("SAAS_CLIENTS", activeTenant), JSON.stringify(state.saasClients));
+    if (state.partners) localStorage.setItem(getStorageKey("PARTNERS", activeTenant), JSON.stringify(state.partners));
+    if (state.partnerContributions) localStorage.setItem(getStorageKey("PARTNER_CONTRIBUTIONS", activeTenant), JSON.stringify(state.partnerContributions));
+    if (state.profitDistributions) localStorage.setItem(getStorageKey("PROFIT_DISTRIBUTIONS", activeTenant), JSON.stringify(state.profitDistributions));
+    if (state.partnerWithdrawals) localStorage.setItem(getStorageKey("PARTNER_WITHDRAWALS", activeTenant), JSON.stringify(state.partnerWithdrawals));
   } catch (error) {
     console.error("Error saving ERP state:", error);
   }

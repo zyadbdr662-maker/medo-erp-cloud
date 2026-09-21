@@ -25,7 +25,8 @@ export type AuditActionType =
   | "SECURITY_ALERT"
   | "AES_ENCRYPTION_TOGGLE"
   | "ROLE_CHANGED"
-  | "SETTINGS_MODIFIED";
+  | "SETTINGS_MODIFIED"
+  | "SYSTEM_REJUVENATION";
 
 export type AuditRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 

@@ -40,6 +40,7 @@ import {
   BookMarked,
   Archive,
   Scale,
+  Handshake,
 } from "lucide-react";
 import { PWAInstallButton } from "./PWAInstallButton";
 import { BzmtLogo } from "./BzmtLogo";
@@ -67,6 +68,7 @@ export type NavTab =
   | "BRANCH_MANAGEMENT"
   | "FIXED_ASSETS"
   | "COST_CENTERS"
+  | "PARTNERS"
   | "EXPENSES_AND_REVENUES"
   | "HUMAN_RESOURCES"
   | "FINANCIAL_REPORTS"
@@ -335,6 +337,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       labelEn: "Cost Centers & Allocation",
       icon: PieChart,
       section: "إدارة الأصول والتكاليف",
+    },
+    {
+      id: "PARTNERS",
+      labelAr: "الشراكات والشركاء",
+      labelEn: "Partners & Equity",
+      icon: Handshake,
+      badge: "حصص وأرباح",
+      badgeColor: "bg-emerald-950 text-emerald-300 border border-emerald-700/50 font-bold",
+      section: "إدارة الشراكات ورؤوس الأموال",
     },
     {
       id: "HUMAN_RESOURCES",

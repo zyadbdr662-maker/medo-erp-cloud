@@ -37,6 +37,7 @@ import { TrustCenterView } from "./components/TrustCenterView";
 import { MedoErpBrochureView } from "./components/MedoErpBrochureView";
 import { UserManualView } from "./components/UserManualView";
 import { ExecutiveMasterSystemSuite } from "./components/ExecutiveMasterSystemSuite";
+import { PartnersManagementView } from "./components/partners/PartnersManagementView";
 import { CentralArchiveSection } from "./components/CentralArchiveSection";
 import { SystemFooter } from "./components/SystemFooter";
 import { LegalDocumentsPage } from "./components/LegalDocumentsPage";
@@ -66,6 +67,7 @@ import { InstantDeployModal } from "./components/InstantDeployModal";
 import { LegalPoliciesModal, LegalPolicyType } from "./components/LegalPoliciesModal";
 import { CookieConsentBanner } from "./components/CookieConsentBanner";
 import { SapUniversalSearchModal } from "./components/SapUniversalSearchModal";
+import { SovereignRejuvenationModal } from "./components/SovereignRejuvenationModal";
 import { soundService } from "./services/notificationSoundService";
 import { trialService, TrialState } from "./services/trialService";
 import { trialOperationsService } from "./services/trialOperationsService";
@@ -112,6 +114,10 @@ import {
   WorkflowRouteRule,
   ExchangeAccount,
   ExchangeTransaction,
+  Partner,
+  PartnerContribution,
+  ProfitDistribution,
+  PartnerWithdrawal,
 } from "./types/erp";
 import { PostgresRepository } from "./services/postgresRepository";
 import { ERPRepository } from "./services/repository";
@@ -166,6 +172,7 @@ export default function App() {
   const [isSelfRegistrationOpen, setIsSelfRegistrationOpen] = useState(false);
   const [isUniversalSearchOpen, setIsUniversalSearchOpen] = useState(false);
   const [isInstantDeployOpen, setIsInstantDeployOpen] = useState(false);
+  const [isSovereignRejuvenationOpen, setIsSovereignRejuvenationOpen] = useState(false);
 
   useEffect(() => {
     const handleOpenSelfReg = () => {
@@ -180,15 +187,20 @@ export default function App() {
     const handleOpenInstantDeploy = () => {
       setIsInstantDeployOpen(true);
     };
+    const handleOpenRejuvenation = () => {
+      setIsSovereignRejuvenationOpen(true);
+    };
     window.addEventListener("open_self_registration", handleOpenSelfReg);
     window.addEventListener("open_universal_search", handleOpenUniversalSearch);
     window.addEventListener("open_patent_certificate", handleOpenPatent);
     window.addEventListener("open_instant_deploy", handleOpenInstantDeploy);
+    window.addEventListener("open_sovereign_rejuvenation", handleOpenRejuvenation);
     return () => {
       window.removeEventListener("open_self_registration", handleOpenSelfReg);
       window.removeEventListener("open_universal_search", handleOpenUniversalSearch);
       window.removeEventListener("open_patent_certificate", handleOpenPatent);
       window.removeEventListener("open_instant_deploy", handleOpenInstantDeploy);
+      window.removeEventListener("open_sovereign_rejuvenation", handleOpenRejuvenation);
     };
   }, []);
   const [isSystemUpdateOpen, setIsSystemUpdateOpen] = useState(false);
@@ -1534,6 +1546,16 @@ export default function App() {
   };
 
   // Add Cost Center & Fixed Asset
+  const handleUpdatePartnersState = (data: {
+    partners?: Partner[];
+    partnerContributions?: PartnerContribution[];
+    profitDistributions?: ProfitDistribution[];
+    partnerWithdrawals?: PartnerWithdrawal[];
+    journalEntries?: JournalEntry[];
+  }) => {
+    updateStateWithRecalculatedGL(data);
+  };
+
   const handleAddCostCenter = (cc: CostCenter) => {
     updateStateWithRecalculatedGL({ costCenters: [...erpState.costCenters, cc] });
   };
@@ -2148,6 +2170,7 @@ export default function App() {
       CASH_FLOW: "قائمة التدفقات النقدية",
       FIXED_ASSETS: "الأصول الثابتة والإهلاكات",
       COST_CENTERS: "مراكز التكلفة والمشاريع",
+      PARTNERS: "إدارة الشراكات والشركاء وتوزيع الأرباح",
       INVENTORY: "المستودعات والمخزون السلعي",
       BRANCH_MANAGEMENT: "إدارة الفروع والمواقع",
       HUMAN_RESOURCES: "الموارد البشرية والرواتب",
@@ -2828,6 +2851,19 @@ export default function App() {
                   onDisposeAsset={handleDisposeFixedAsset}
                 />
               )}
+              {activeTab === "PARTNERS" && (
+                <PartnersManagementView
+                  partners={erpState.partners || []}
+                  partnerContributions={erpState.partnerContributions || []}
+                  profitDistributions={erpState.profitDistributions || []}
+                  partnerWithdrawals={erpState.partnerWithdrawals || []}
+                  accounts={erpState.accounts}
+                  journalEntries={erpState.journalEntries}
+                  displayCurrency={selectedCurrency}
+                  currentUser={erpState.currentUser}
+                  onUpdatePartnersState={handleUpdatePartnersState}
+                />
+              )}
               {isMasterAdminActive && activeTab === "EXECUTIVE_MASTER_SUITE" && (
                 <ExecutiveMasterSystemSuite
                   fullState={erpState}
@@ -3373,6 +3409,12 @@ export default function App() {
           <InstantDeployModal
             isOpen={isInstantDeployOpen}
             onClose={() => setIsInstantDeployOpen(false)}
+          />
+
+          {/* Sovereign Rejuvenation & Optimization Modal (مركز الإنعاش والتطهير السيادي السحابي) */}
+          <SovereignRejuvenationModal
+            isOpen={isSovereignRejuvenationOpen}
+            onClose={() => setIsSovereignRejuvenationOpen(false)}
           />
 
           {/* Cookie Consent Banner */}

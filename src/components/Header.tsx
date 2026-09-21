@@ -31,6 +31,7 @@ import {
   Building2,
   DatabaseBackup,
   Rocket,
+  Zap,
 } from "lucide-react";
 import { CurrencyCode, CurrencyInfo, ERPUser, CalendarType } from "../types/erp";
 import { LocalSyncEngine } from "../services/localSyncEngine";
@@ -366,6 +367,20 @@ export const Header: React.FC<HeaderProps> = ({
                   AES-256
                 </span>
               </div>
+            </button>
+          )}
+
+          {/* Sovereign Rejuvenation Button (⚡ إنعاش سيادي) */}
+          {IS_ADMIN_ENV && (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("open_sovereign_rejuvenation"))}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs transition-all shadow-[0_0_15px_rgba(212,175,55,0.4)] border border-yellow-200 active:scale-95 cursor-pointer"
+              title="إنعاش وتطهير سيادي سحابي فائق: تفريغ الذاكرة وتخفيف النظام ومزامنة السحابة (60 FPS)"
+              aria-label="إنعاش سيادي فائق"
+            >
+              <Zap className="w-3.5 h-3.5 text-slate-950 fill-slate-950 animate-pulse" />
+              <span className="font-black tracking-wide hidden md:inline">⚡ إنعاش سيادي</span>
             </button>
           )}
 

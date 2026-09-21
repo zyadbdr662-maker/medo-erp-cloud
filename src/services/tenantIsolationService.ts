@@ -1118,12 +1118,26 @@ export class TenantIsolationService {
         "VENDORS_AP",
         "INVENTORY",
         "CASH_AND_BANK",
+        "PARTNERS",
         "USER_MANUAL",
         "MEDO_BROCHURE",
         "AI_ASSISTANT",
         "COLLABORATION",
       ];
       return allowedAuditorTabs.includes(tab);
+    }
+
+    if (cleanRole === "PARTNER") {
+      const allowedPartnerTabs = [
+        "DASHBOARD",
+        "PARTNERS",
+        "FINANCIAL_REPORTS",
+        "USER_MANUAL",
+        "MEDO_BROCHURE",
+        "COLLABORATION",
+        "AI_ASSISTANT",
+      ];
+      return allowedPartnerTabs.includes(tab);
     }
 
     if (cleanRole === "ACCOUNTANT") {

@@ -44,7 +44,8 @@ import { SystemPromptsHistoryDashboard } from "./SystemPromptsHistoryDashboard";
 import { SystemAuditReportView } from "./SystemAuditReportView";
 import { SapUniversalSearchModal } from "./SapUniversalSearchModal";
 import { SystemDeployCard } from "./SystemDeployCard";
-import { Search } from "lucide-react";
+import { SovereignRejuvenationModal } from "./SovereignRejuvenationModal";
+import { Search, Zap } from "lucide-react";
 import { ERPState, SystemSettings } from "../types/erp";
 import { soundService, SoundType, WhatsAppNotificationPayload } from "../services/notificationSoundService";
 
@@ -81,6 +82,16 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
     | "PROMPTS_HISTORY"
     | "SYSTEM_AUDIT_REPORT"
   >("SETTINGS");
+
+  const [isRejuvenationModalOpen, setIsRejuvenationModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenRejuvenation = () => setIsRejuvenationModalOpen(true);
+    window.addEventListener("open_sovereign_rejuvenation", handleOpenRejuvenation);
+    return () => {
+      window.removeEventListener("open_sovereign_rejuvenation", handleOpenRejuvenation);
+    };
+  }, []);
 
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateResult, setUpdateResult] = useState<{
@@ -284,6 +295,17 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {/* Super Sovereign Rejuvenation Button (⚡ إنعاش وتطهير سيادي سحابي فائق) */}
+            <button
+              id="sovereign-rejuvenation-btn"
+              onClick={() => setIsRejuvenationModalOpen(true)}
+              className="px-4 py-2.5 bg-gradient-to-r from-amber-400 via-[#D4AF37] to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-[0_0_25px_rgba(212,175,55,0.6)] border-2 border-yellow-200 flex items-center gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer transform"
+              title="إنعاش وتطهير سيادي شامل: تفريغ الذاكرة، تسريع الـ DOM، تطهير الكاش، وتحديث الجلسة السحابية 60 FPS"
+            >
+              <Zap className="w-4 h-4 text-slate-950 fill-slate-950 animate-bounce" />
+              <span>⚡ إنعاش وتطهير سيادي فائق (Ultra 60 FPS)</span>
+            </button>
+
             <button
               onClick={() => setActiveTab("DEPLOY_CHECK")}
               className="px-4 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-blue-950/50 border border-blue-300 flex items-center gap-2 transition hover:scale-105 active:scale-95 cursor-pointer"
@@ -1099,6 +1121,12 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
       {activeTab === "SYSTEM_AUDIT_REPORT" && (
         <SystemAuditReportView currentUserName={fullState.currentUser?.name || "الأستاذ بدر عايض محمد"} />
       )}
+
+      {/* Sovereign Rejuvenation & Optimization Modal */}
+      <SovereignRejuvenationModal
+        isOpen={isRejuvenationModalOpen}
+        onClose={() => setIsRejuvenationModalOpen(false)}
+      />
     </div>
   );
 };

@@ -31,6 +31,7 @@ import {
   Layers,
   ChevronDown,
   Building,
+  Zap,
 } from "lucide-react";
 import {
   AdminPortalSecurityService,
@@ -437,6 +438,16 @@ export const SecretAdminGatewayModal: React.FC<SecretAdminGatewayModalProps> = (
           >
             <Sparkles className="w-4 h-4 text-emerald-300" />
             <span>🚀 الإصدار وخطوات النشر</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("open_sovereign_rejuvenation"))}
+            className="flex-1 min-w-[150px] py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-slate-950 shadow-[0_0_15px_rgba(212,175,55,0.4)] border border-yellow-200 hover:scale-105 active:scale-95"
+            title="إنعاش وتطهير سيادي سحابي فائق وتفريغ الذاكرة"
+          >
+            <Zap className="w-4 h-4 text-slate-950 fill-slate-950 animate-pulse" />
+            <span>⚡ إنعاش سيادي فائق</span>
           </button>
         </div>
 
