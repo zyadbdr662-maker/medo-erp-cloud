@@ -1,0 +1,6 @@
+{
+  "name": "نظام SAP/MeDO ERP المؤسسي",
+  "description": "منظومة SAP/MeDO ERP السحابية المتكاملة لإدارة المؤسسات والمحاسبة والمالية والمخازن والفوترة الإلكترونية بأمان بمستوى بنكي.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

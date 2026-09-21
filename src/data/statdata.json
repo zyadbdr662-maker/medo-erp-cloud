@@ -1,0 +1,50 @@
+{
+  "stats": {
+    "totalArticles": 7,
+    "lastUpdated": "2026-09-08"
+  },
+  "history": [
+    {
+      "articleId": 7,
+      "version": "1.0",
+      "timestamp": "2026-09-08",
+      "title": "MeDo ERP: شريك البناء والذكاء المالي"
+    },
+    {
+      "articleId": 1,
+      "version": "1.0",
+      "timestamp": "2026-09-07",
+      "title": "MeDo ERP: إطلاق الجيل الجديد من الأنظمة المحاسبية السحابية في اليمن"
+    },
+    {
+      "articleId": 2,
+      "version": "1.0",
+      "timestamp": "2026-09-07",
+      "title": "الذكاء الاصطناعي في MeDo ERP: شريكك المالي الذكي"
+    },
+    {
+      "articleId": 3,
+      "version": "1.0",
+      "timestamp": "2026-09-07",
+      "title": "التدفقات النقدية: شريان الحياة لأي مؤسسة وكيف يديرها MeDo ERP"
+    },
+    {
+      "articleId": 4,
+      "version": "1.0",
+      "timestamp": "2026-09-07",
+      "title": "من التحديات إلى الريادة: قصة تحول مجموعة بن زياد مع MeDo ERP"
+    },
+    {
+      "articleId": 5,
+      "version": "1.0",
+      "timestamp": "2026-09-06",
+      "title": "SAP S/4HANA: رحلة التحول نحو الذكاء التشغيلي"
+    },
+    {
+      "articleId": 6,
+      "version": "1.0",
+      "timestamp": "2026-09-05",
+      "title": "إدارة الأصول الثابتة: معايير الدقة والامتثال"
+    }
+  ]
+}
