@@ -34,16 +34,6 @@ export const MarketingLayout = () => {
             <Link to="/pricing" className="text-slate-100 hover:text-[#00D4FF] transition py-1">{lang === 'ar' ? 'الأسعار' : 'Pricing'}</Link>
             <Link to="/blog" className="text-slate-100 hover:text-[#00D4FF] transition py-1">{lang === 'ar' ? 'المدونة' : 'Blog'}</Link>
             <Link to="/contact" className="text-slate-100 hover:text-[#00D4FF] transition py-1">{lang === 'ar' ? 'اتصل بنا' : 'Contact'}</Link>
-            
-            {/* Instant Deploy Button */}
-            <button
-              onClick={() => setShowInstantDeploy(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-amber-400 to-[#d4af37] hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs transition-all shadow-[0_0_15px_rgba(212,175,55,0.4)] border border-yellow-200 active:scale-95 cursor-pointer"
-              title="نشر فوري وتحديث الرابط الرسمي"
-            >
-              <Rocket className="w-3.5 h-3.5 text-slate-950" />
-              <span>🚀 نشر فوري</span>
-            </button>
 
             <button onClick={toggleLang} className="text-[#00D4FF] font-bold border border-[#00D4FF]/40 px-3 py-1 rounded-lg text-xs hover:bg-[#00D4FF] hover:text-[#0a2540] transition">
               {lang === 'ar' ? 'EN' : 'عربي'}

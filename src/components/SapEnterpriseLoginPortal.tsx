@@ -1363,7 +1363,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                     </>
                   ) : (
                     <>
-                      <Rocket className="w-5 h-5 text-[#0a2540] animate-bounce" />
+                      <ShieldCheck className="w-5 h-5 text-[#0a2540]" />
                       <span>تسجيل الدخول إلى MeDo ERP</span>
                     </>
                   )}

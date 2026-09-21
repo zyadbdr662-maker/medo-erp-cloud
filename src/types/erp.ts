@@ -238,6 +238,10 @@ export interface InvoiceItem {
   description: string;
   itemName?: string;
   unit?: string;
+  selectedUnit?: string; // e.g. "كرتون", "شدة", "حبة"
+  unitConversionFactor?: number; // Factor relative to base unit (e.g. 12 for شدة, 120 for حبة)
+  baseUnitQuantity?: number; // Quantity converted to base inventory unit
+  unitHierarchyBreakdown?: string; // Text representation: e.g. "2 كرتون = 24 شدة = 240 حبة"
   quantity: number;
   unitPrice: number;
   taxPercent?: number; // 0, 5, 15%
@@ -427,6 +431,31 @@ export interface ERPUser {
   plan?: "TRIAL" | "PRO" | "ENTERPRISE";
 }
 
+export interface ItemUnitLevel {
+  id?: string;
+  level: number; // 1 = Base, 2, 3...
+  unitName: string; // e.g. "كرتون", "شدة", "حبة"
+  unitCode?: string;
+  conversionFactor?: number; // Factor relative to parent level (e.g. 1 parent = 12 this)
+  cumulativeFactor: number; // Factor relative to base unit (e.g. 1 base unit = 120 this)
+  barcode?: string;
+  sellingPrice?: number; // Optional unit-specific selling price
+  purchasePrice?: number; // Optional unit-specific purchase price
+  defaultSellingPrice?: number; // Predefined selling price for this unit level
+  defaultCostPrice?: number; // Predefined cost price for this unit level
+  parentUnitName?: string;
+  parentFactor?: number;
+  isBaseUnit?: boolean;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
+export interface ItemUnitHierarchy {
+  baseUnit: string;
+  levels: ItemUnitLevel[];
+  notes?: string;
+}
+
 export interface InventoryItem {
   id: string;
   code: string; // SKU e.g. "INV-1001"
@@ -437,6 +466,7 @@ export interface InventoryItem {
   name?: string; // Friendly alias
   category: string;
   unit: string;
+  unitHierarchy?: ItemUnitHierarchy; // نظام التوزيعات الهرمية للوحدات
   quantityOnHand: number;
   minStockThreshold: number;
   costPrice: number;

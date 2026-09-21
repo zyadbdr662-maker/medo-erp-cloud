@@ -77,6 +77,21 @@ export const InstantDeployModal: React.FC<InstantDeployModalProps> = ({ isOpen, 
 
         {/* Body */}
         <div className="p-6 space-y-5">
+          {/* Sovereign Security Authorization Banner */}
+          <div className="p-3 bg-gradient-to-r from-amber-950/60 via-slate-900 to-amber-950/60 border border-[#d4af37]/50 rounded-2xl flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#d4af37] shrink-0" />
+              <div>
+                <span className="font-bold text-[#d4af37]">بوابة الإدارة السيادية العليا (Sovereign Admin Gateway):</span>
+                <span className="text-slate-300 mr-1.5">صلاحيات النشر والتحديث محصورة لـ: </span>
+                <span className="font-black text-white bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">بدر عايض ٥</span>
+              </div>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-mono font-bold">
+              AUTHORIZED
+            </span>
+          </div>
+
           {/* Status Box */}
           <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
             <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-800">

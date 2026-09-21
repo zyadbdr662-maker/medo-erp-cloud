@@ -335,12 +335,57 @@ export const SalesAndReturnsView: React.FC<SalesAndReturnsViewProps> = ({
     setInvItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
-        const updated = { ...item, [field]: val };
-        if (field === "quantity" || field === "unitPrice") {
-          const qty = field === "quantity" ? Number(val) : item.quantity;
-          const price = field === "unitPrice" ? Number(val) : item.unitPrice;
-          updated.total = qty * price;
+        const updated: InvoiceItem = { ...item, [field]: val };
+
+        const currentItemId = field === "inventoryItemId" ? val : updated.inventoryItemId;
+        const matchedInv = inventoryItems?.find((inv) => inv.id === currentItemId);
+
+        if (field === "inventoryItemId") {
+          if (matchedInv) {
+            const hierarchy = matchedInv.unitHierarchy;
+            const baseUnit = hierarchy?.baseUnit || matchedInv.unit || "حبة";
+            updated.selectedUnit = baseUnit;
+            updated.unitConversionFactor = 1;
+            const qty = Number(updated.quantity) || 1;
+            updated.baseUnitQuantity = qty;
+            updated.unitHierarchyBreakdown = `${qty} ${baseUnit}`;
+          } else {
+            updated.selectedUnit = undefined;
+            updated.unitConversionFactor = 1;
+            updated.baseUnitQuantity = Number(updated.quantity) || 1;
+            updated.unitHierarchyBreakdown = undefined;
+          }
         }
+
+        if (field === "selectedUnit" && matchedInv?.unitHierarchy?.levels) {
+          const lvl = matchedInv.unitHierarchy.levels.find((l) => l.unitName === val);
+          const factor = lvl?.cumulativeFactor || 1;
+          updated.selectedUnit = val;
+          updated.unitConversionFactor = factor;
+          const qty = Number(updated.quantity) || 0;
+          updated.baseUnitQuantity = qty * factor;
+          updated.unitHierarchyBreakdown = `${qty} ${val} = ${updated.baseUnitQuantity} ${matchedInv.unitHierarchy.baseUnit || matchedInv.unit}`;
+
+          // If the selected level has a predefined unit price, auto-populate it
+          if (lvl?.defaultSellingPrice && lvl.defaultSellingPrice > 0) {
+            updated.unitPrice = lvl.defaultSellingPrice;
+          } else if (matchedInv.sellingPrice && factor > 1) {
+            updated.unitPrice = matchedInv.sellingPrice * factor;
+          }
+        }
+
+        if (field === "quantity" || field === "unitPrice" || field === "selectedUnit") {
+          const qty = field === "quantity" ? Number(val) : (Number(updated.quantity) || 0);
+          const price = field === "unitPrice" ? Number(val) : (Number(updated.unitPrice) || 0);
+          updated.total = qty * price;
+
+          const factor = updated.unitConversionFactor || 1;
+          updated.baseUnitQuantity = qty * factor;
+          if (matchedInv?.unitHierarchy?.baseUnit) {
+            updated.unitHierarchyBreakdown = `${qty} ${updated.selectedUnit || matchedInv.unit} = ${updated.baseUnitQuantity} ${matchedInv.unitHierarchy.baseUnit}`;
+          }
+        }
+
         return updated;
       })
     );
@@ -1602,15 +1647,52 @@ export const SalesAndReturnsView: React.FC<SalesAndReturnsViewProps> = ({
                             })()}
                           </td>
                           <td className="p-2">
-                            <input
-                              type="number"
-                              min="1"
-                              step="any"
-                              value={item.quantity}
-                              onChange={(e) => updateInvoiceItem(item.id, "quantity", e.target.value)}
-                              className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 font-mono text-center focus:outline-none focus:border-emerald-500"
-                              required
-                            />
+                            {(() => {
+                              const selItem = inventoryItems?.find((inv) => inv.id === item.inventoryItemId);
+                              const hasHierarchy = selItem?.unitHierarchy?.levels && selItem.unitHierarchy.levels.length > 1;
+
+                              return (
+                                <div className="space-y-1">
+                                  <input
+                                    type="number"
+                                    min="0.01"
+                                    step="any"
+                                    value={item.quantity}
+                                    onChange={(e) => updateInvoiceItem(item.id, "quantity", e.target.value)}
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 font-mono text-center focus:outline-none focus:border-emerald-500"
+                                    required
+                                  />
+                                  {hasHierarchy ? (
+                                    <div className="space-y-0.5">
+                                      <select
+                                        value={item.selectedUnit || selItem.unitHierarchy?.baseUnit || selItem.unit}
+                                        onChange={(e) => updateInvoiceItem(item.id, "selectedUnit", e.target.value)}
+                                        className="w-full bg-slate-950 border border-amber-500/50 rounded-md px-1 py-1 text-[11px] text-amber-300 font-bold focus:outline-none focus:border-amber-400 cursor-pointer text-center"
+                                        title="اختر وحدة البيع من مستويات التوزيع الهرمي"
+                                      >
+                                        {selItem.unitHierarchy?.levels.map((lvl) => (
+                                          <option key={lvl.level} value={lvl.unitName}>
+                                            {lvl.unitName} (×{lvl.cumulativeFactor})
+                                          </option>
+                                        ))}
+                                      </select>
+                                      {item.unitConversionFactor && item.unitConversionFactor > 1 && (
+                                        <div
+                                          className="text-[10px] text-emerald-400 font-mono text-center"
+                                          title="الكمية الإجمالية المحسوبة بالوحدة الأساسية"
+                                        >
+                                          = {((Number(item.quantity) || 0) * item.unitConversionFactor).toLocaleString()} {selItem.unitHierarchy?.baseUnit || selItem.unit}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="text-[10px] text-slate-400 text-center font-sans">
+                                      {selItem?.unit || "وحدة"}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="p-2">
                             <input
@@ -2201,8 +2283,24 @@ export const SalesAndReturnsView: React.FC<SalesAndReturnsViewProps> = ({
                 <tbody className="divide-y divide-slate-800/60">
                   {selectedInvoiceDetails.items?.map((item, idx) => (
                     <tr key={idx}>
-                      <td className="p-2.5 text-slate-200">{item.description}</td>
-                      <td className="p-2.5 text-center font-mono">{item.quantity}</td>
+                      <td className="p-2.5 text-slate-200">
+                        <div>{item.description}</div>
+                        {item.unitHierarchyBreakdown && (
+                          <div className="text-[10px] text-amber-400 font-mono mt-0.5">
+                            {item.unitHierarchyBreakdown}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-2.5 text-center font-mono">
+                        <div>
+                          {item.quantity} <span className="text-[11px] text-slate-400">{item.selectedUnit || ""}</span>
+                        </div>
+                        {item.unitConversionFactor && item.unitConversionFactor > 1 && (
+                          <div className="text-[10px] text-emerald-400 font-mono">
+                            (= {item.baseUnitQuantity || item.quantity * item.unitConversionFactor} أساسي)
+                          </div>
+                        )}
+                      </td>
                       <td className="p-2.5 text-left font-mono">{formatNumberOnly(item.unitPrice)}</td>
                       <td className="p-2.5 text-left font-mono font-bold text-slate-200">
                         {formatNumberOnly(item.total)}

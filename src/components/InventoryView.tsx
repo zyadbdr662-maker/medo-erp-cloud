@@ -29,6 +29,9 @@ import {
   CheckSquare,
   Square,
   AlertCircle,
+  Boxes,
+  Eye,
+  FileText,
 } from "lucide-react";
 import {
   CurrencyCode,
@@ -37,11 +40,19 @@ import {
   StockMovement,
   StockMovementType,
   JournalEntry,
+  ItemUnitHierarchy,
 } from "../types/erp";
 import { convertCurrency, formatMoney, formatNumberOnly } from "../services/erpStorage";
 import { InventoryMovementsTab } from "./InventoryMovementsTab";
 import { InventoryStocktakeTab } from "./InventoryStocktakeTab";
 import { ColumnCustomizer, useColumnVisibility, ColumnDef } from "./ColumnCustomizer";
+import { UnitHierarchyModal } from "./inventory/UnitHierarchyModal";
+import { MultiUnitInventoryReportModal } from "./inventory/MultiUnitInventoryReportModal";
+import {
+  formatHierarchySummary,
+  formatHierarchyEquation,
+  calculateStockInAllUnits,
+} from "../utils/unitHierarchyUtils";
 
 interface InventoryViewProps {
   inventoryItems: InventoryItem[];
@@ -116,6 +127,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [selectedMovementItem, setSelectedMovementItem] = useState<InventoryItem | null>(null);
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
   const [isNewMovementModalOpen, setIsNewMovementModalOpen] = useState(false);
+
+  // Unit Hierarchy & Multi-Unit Report Modals State
+  const [isUnitHierarchyModalOpen, setIsUnitHierarchyModalOpen] = useState(false);
+  const [isMultiUnitReportOpen, setIsMultiUnitReportOpen] = useState(false);
+  const [activePreviewHierarchyItem, setActivePreviewHierarchyItem] = useState<InventoryItem | null>(null);
 
   // Form State for Add/Edit Item
   const [itemFormData, setItemFormData] = useState<Partial<InventoryItem>>({
@@ -380,6 +396,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         barcode: itemFormData.barcode || "",
         description: itemFormData.description || "",
         createdAt: new Date().toISOString().slice(0, 10),
+        unitHierarchy: itemFormData.unitHierarchy,
       };
       onAddInventoryItem(newItem);
     }
@@ -623,6 +640,16 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           >
             <Plus className="w-4 h-4" />
             <span>إضافة صنف جديد</span>
+          </button>
+
+          {/* Multi-Unit Report Button */}
+          <button
+            onClick={() => setIsMultiUnitReportOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white text-xs font-bold border border-amber-500/50 shadow-lg shadow-amber-950/40 transition"
+            title="استعراض تقرير المخزون الشامل بجميع مستويات الوحدات والتوزيعات الهرمية (كرتون / شدة / حبة)"
+          >
+            <Boxes className="w-4 h-4 text-amber-200" />
+            <span>تقرير كل الوحدات</span>
           </button>
 
           {/* مسح الأصناف Button */}
@@ -1059,6 +1086,26 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           <div className="text-[10px] text-slate-400 font-normal mt-0.5">
                             الحد الأدنى: {item.minStockThreshold} {item.unit}
                           </div>
+
+                          {/* Multi-Unit Hierarchy Breakdown & Preview Button */}
+                          {item.unitHierarchy?.levels && item.unitHierarchy.levels.length > 1 && (
+                            <div className="mt-1.5 space-y-1">
+                              <button
+                                type="button"
+                                onClick={() => setActivePreviewHierarchyItem(item)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-950/80 hover:bg-amber-900 border border-amber-600/40 text-[10px] text-amber-300 font-mono transition cursor-pointer"
+                                title="عرض تفكيك الرصيد بجميع الوحدات"
+                              >
+                                <Layers className="w-3 h-3 text-amber-400" />
+                                <span>{formatHierarchySummary(item.unitHierarchy)}</span>
+                              </button>
+                              <div className="text-[10px] text-emerald-400/90 font-mono flex flex-wrap gap-1">
+                                {calculateStockInAllUnits(item.quantityOnHand, item.unitHierarchy)
+                                  .map((s) => `${s.quantity.toLocaleString()} ${s.unitName}`)
+                                  .join(" = ")}
+                              </div>
+                            </div>
+                          )}
                         </td>
                       )}
 
@@ -1519,14 +1566,64 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">وحدة القياس:</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-slate-300 font-semibold">وحدة القياس: *</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsUnitHierarchyModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-emerald-500/20 hover:from-amber-500/30 hover:to-emerald-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-bold transition shadow-sm hover:scale-[1.02] cursor-pointer"
+                      title="إضافة وتعديل التوزيعات الهرمية (كرتون ← شدة ← حبة)"
+                    >
+                      <Layers className="w-3.5 h-3.5 text-amber-400" />
+                      <span>
+                        {itemFormData.unitHierarchy?.levels && itemFormData.unitHierarchy.levels.length > 1
+                          ? `🗂️ التوزيعات (${itemFormData.unitHierarchy.levels.length} مستويات)`
+                          : "+ إضافة توزيعات هرمية"}
+                      </span>
+                    </button>
+                  </div>
                   <input
                     type="text"
-                    value={itemFormData.unit}
-                    onChange={(e) => setItemFormData({ ...itemFormData, unit: e.target.value })}
+                    value={itemFormData.unit || ""}
+                    onChange={(e) => {
+                      const newUnit = e.target.value;
+                      setItemFormData({
+                        ...itemFormData,
+                        unit: newUnit,
+                        unitHierarchy: itemFormData.unitHierarchy
+                          ? {
+                              ...itemFormData.unitHierarchy,
+                              baseUnit: newUnit,
+                              levels: itemFormData.unitHierarchy.levels.map((lvl, idx) =>
+                                idx === 0 ? { ...lvl, unitName: newUnit } : lvl
+                              ),
+                            }
+                          : undefined,
+                      });
+                    }}
                     placeholder="طقم / حبة / لفة / كرتون"
                     className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-2.5 focus:border-emerald-500"
+                    required
                   />
+
+                  {/* Live Hierarchy Equation Badge */}
+                  {itemFormData.unitHierarchy?.levels && itemFormData.unitHierarchy.levels.length > 1 && (
+                    <div className="mt-1.5 p-2 bg-slate-950/90 border border-amber-500/40 rounded-xl flex items-center justify-between text-[11px] text-amber-300 font-mono animate-fade-in shadow-inner">
+                      <div className="flex items-center gap-1.5 overflow-hidden">
+                        <Layers className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span className="font-bold truncate" title={formatHierarchyEquation(itemFormData.unitHierarchy)}>
+                          {formatHierarchyEquation(itemFormData.unitHierarchy)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsUnitHierarchyModalOpen(true)}
+                        className="text-[11px] text-amber-400 hover:text-white underline font-sans mr-2 shrink-0 cursor-pointer"
+                      >
+                        تعديل
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1982,6 +2079,159 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <span>تنفيذ مسح الأصناف</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unit Hierarchy Builder / Editor Modal */}
+      <UnitHierarchyModal
+        isOpen={isUnitHierarchyModalOpen}
+        onClose={() => setIsUnitHierarchyModalOpen(false)}
+        initialHierarchy={itemFormData.unitHierarchy}
+        baseUnit={itemFormData.unit || "حبة"}
+        itemName={itemFormData.nameAr || "الصنف المخزني"}
+        itemCode={itemFormData.code}
+        itemSellingPrice={Number(itemFormData.sellingPrice) || 0}
+        itemCostPrice={Number(itemFormData.costPrice) || 0}
+        currency={itemFormData.currency || displayCurrency}
+        onSave={(hierarchy) => {
+          setItemFormData((prev) => ({
+            ...prev,
+            unit: hierarchy.baseUnit || prev.unit,
+            unitHierarchy: hierarchy,
+          }));
+          setIsUnitHierarchyModalOpen(false);
+        }}
+      />
+
+      {/* Comprehensive Multi-Unit Inventory Report Modal */}
+      <MultiUnitInventoryReportModal
+        isOpen={isMultiUnitReportOpen}
+        onClose={() => setIsMultiUnitReportOpen(false)}
+        inventoryItems={inventoryItems}
+        currencies={currencies}
+        companyName="شركة الزرقاء النبيلة"
+      />
+
+      {/* Quick Unit Breakdown Preview Modal for a specific Item */}
+      {activePreviewHierarchyItem && activePreviewHierarchyItem.unitHierarchy && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+          dir="rtl"
+          onClick={() => setActivePreviewHierarchyItem(null)}
+        >
+          <div
+            className="bg-slate-900 border border-amber-500/50 rounded-2xl w-full max-w-lg p-5 shadow-2xl text-right animate-scale-up space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">
+                    توزيعات ووحدات: {activePreviewHierarchyItem.nameAr}
+                  </h3>
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    {activePreviewHierarchyItem.code} | {activePreviewHierarchyItem.category}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setActivePreviewHierarchyItem(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Equation */}
+            <div className="p-3 bg-amber-950/40 border border-amber-700/50 rounded-xl text-xs text-amber-300 font-mono text-center">
+              معادلة الصنف: {formatHierarchyEquation(activePreviewHierarchyItem.unitHierarchy)}
+            </div>
+
+            {/* Current Stock in all units */}
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-slate-300">
+                الرصيد الفعلي المتوفر بالمستودع بجميع الوحدات:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {calculateStockInAllUnits(
+                  activePreviewHierarchyItem.quantityOnHand,
+                  activePreviewHierarchyItem.unitHierarchy
+                ).map((stk, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-3 rounded-xl border flex items-center justify-between ${
+                      stk.isBase
+                        ? "bg-amber-950/70 border-amber-600/50 text-amber-200"
+                        : "bg-slate-950 border-slate-800 text-slate-200"
+                    }`}
+                  >
+                    <div>
+                      <div className="font-bold text-sm text-white">
+                        {stk.quantity.toLocaleString()} {stk.unitName}
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        {stk.isBase
+                          ? "الوحدة الأساسية الصغرى"
+                          : `معامل التحويل: ×${stk.cumulativeFactor}`}
+                      </div>
+                    </div>
+                    {stk.isBase && (
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-amber-900/60 border border-amber-500/40 text-amber-300 font-bold">
+                        الأساس
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Levels breakdown table */}
+            <div className="border border-slate-800 rounded-xl overflow-hidden">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="p-2.5">المستوى</th>
+                    <th className="p-2.5">اسم الوحدة</th>
+                    <th className="p-2.5 text-center">المعامل</th>
+                    <th className="p-2.5 text-left">سعر البيع المقترح</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 bg-slate-950/40">
+                  {activePreviewHierarchyItem.unitHierarchy.levels.map((lvl) => (
+                    <tr key={lvl.level}>
+                      <td className="p-2.5 text-slate-400 font-mono">م{lvl.level}</td>
+                      <td className="p-2.5 font-bold text-slate-200">{lvl.unitName}</td>
+                      <td className="p-2.5 text-center font-mono text-amber-400">
+                        = {lvl.cumulativeFactor} {activePreviewHierarchyItem.unit}
+                      </td>
+                      <td className="p-2.5 text-left font-mono text-emerald-400 font-bold">
+                        {lvl.defaultSellingPrice
+                          ? formatMoney(
+                              lvl.defaultSellingPrice,
+                              activePreviewHierarchyItem.currency,
+                              currencies
+                            )
+                          : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setActivePreviewHierarchyItem(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
+              >
+                إغلاق
+              </button>
             </div>
           </div>
         </div>

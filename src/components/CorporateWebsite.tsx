@@ -295,18 +295,6 @@ export const CorporateWebsite: React.FC<CorporateWebsiteProps> = ({ availableBra
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-3">
-              {/* Golden Instant Deploy Button (🚀 نشر فوري) */}
-              <button
-                type="button"
-                onClick={() => setShowInstantDeploy(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#d4af37] via-amber-400 to-[#d4af37] hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs transition-all shadow-[0_0_15px_rgba(212,175,55,0.4)] border border-yellow-200 active:scale-95 cursor-pointer"
-                title="نشر فوري: حفظ التعديلات والمزامنة مع GitHub وVercel"
-                aria-label="نشر فوري"
-              >
-                <Rocket className="w-3.5 h-3.5 text-slate-950" />
-                <span>🚀 نشر فوري</span>
-              </button>
-
               <button 
                 id="header-login-btn"
                 onClick={() => { setDefaultShowSaaSOnboarding(false); setShowLogin(true); }}
@@ -342,13 +330,6 @@ export const CorporateWebsite: React.FC<CorporateWebsiteProps> = ({ availableBra
             <div className="flex flex-col space-y-3">
               <NavLinks />
               <div className="border-t border-[#1E3A8A]/40 pt-4 flex flex-col gap-3">
-                <button 
-                  onClick={() => { setShowInstantDeploy(true); setMobileMenuOpen(false); }}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#d4af37] via-amber-400 to-[#d4af37] text-slate-950 font-black text-sm border border-yellow-200 transition-all text-center shadow-lg flex items-center justify-center gap-2"
-                >
-                  <Rocket className="w-4 h-4 text-slate-950" />
-                  <span>🚀 نشر فوري (Auto-Deploy)</span>
-                </button>
                 <button 
                   onClick={() => { setDefaultShowSaaSOnboarding(false); setShowLogin(true); setMobileMenuOpen(false); }}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-[#1E3A8A] to-[#2563EB] text-white font-black text-sm border border-blue-400/40 transition-colors text-center shadow-md"
