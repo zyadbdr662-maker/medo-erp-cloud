@@ -6,8 +6,8 @@
 
 ## 🎯 المشروع والبيئة الرسمية المعتمدة (Production Master)
 
-* **اسم المشروع المعتمد (Vercel)**: `mdanmedo-erp-sap-s-4hana-6103-ai-studio`
-* **الرابط الرسمي المعتمد (Live Production)**: [https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app](https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app)
+* **اسم المشروع المعتمد (Vercel)**: `MeDo ERP Cloud (medo-erp-cloud)`
+* **الرابط الرسمي المعتمد (Live Production)**: [https://medo-erp-cloud.vercel.app](https://medo-erp-cloud.vercel.app)
 * **النطاق السيادي المخصص (Custom Domain)**: [https://medo-erp.us.ci](https://medo-erp.us.ci)
 * **مستودع الأكواد (GitHub)**: `https://github.com/zyadbdr662-maker/Mdanmedo-erp-sap-s-4hana-6103.ai.studio`
 * **حالة النشر التلقائي**: ✅ مفعّل تلقائياً (AI Studio ➔ GitHub `main` ➔ Vercel Auto-Deploy)
@@ -18,26 +18,26 @@
 
 ### 1. الرابط الرئيسي لأي منشأة:
 ```
-https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[tenant-id]
+https://medo-erp-cloud.vercel.app/?tenant=[tenant-id]
 ```
-*مثال: `https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=company-1`*
+*مثال: `https://medo-erp-cloud.vercel.app/?tenant=company-1`*
 
 ### 2. الروابط الفرعية للأدوار الخمسة المعتمدة:
 
 * **مدير الفرع (MANAGER)**:
-  `https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[id]&role=MANAGER&token=AUTH_MGR_[id]&path=/employee/manager`
+  `https://medo-erp-cloud.vercel.app/?tenant=[id]&role=MANAGER&token=AUTH_MGR_[id]&path=/employee/manager`
 
 * **المحاسب المالي (ACCOUNTANT)**:
-  `https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[id]&role=ACCOUNTANT&token=AUTH_ACC_[id]&path=/employee/accountant`
+  `https://medo-erp-cloud.vercel.app/?tenant=[id]&role=ACCOUNTANT&token=AUTH_ACC_[id]&path=/employee/accountant`
 
 * **أمين الصندوق والكاشير (CASHIER)**:
-  `https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[id]&role=CASHIER&token=AUTH_SALES_[id]&path=/employee/sales`
+  `https://medo-erp-cloud.vercel.app/?tenant=[id]&role=CASHIER&token=AUTH_SALES_[id]&path=/employee/sales`
 
 * **مسؤول المشتريات والمخازن (PURCHASER)**:
-  `https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[id]&role=PURCHASER&token=AUTH_PUR_[id]&path=/employee/purchase`
+  `https://medo-erp-cloud.vercel.app/?tenant=[id]&role=PURCHASER&token=AUTH_PUR_[id]&path=/employee/purchase`
 
 * **المراجع والمدقق الداخلي (AUDITOR)**:
-  `https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[id]&role=AUDITOR&token=AUTH_AUD_[id]&path=/employee/auditor`
+  `https://medo-erp-cloud.vercel.app/?tenant=[id]&role=AUDITOR&token=AUTH_AUD_[id]&path=/employee/auditor`
 
 ---
 

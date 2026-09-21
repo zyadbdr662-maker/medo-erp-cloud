@@ -131,7 +131,7 @@ const industries = [
   "طاقة وبيئة",
 ];
 
-export const VERCEL_PRODUCTION_BASE = "https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app";
+export const VERCEL_PRODUCTION_BASE = "https://medo-erp-cloud.vercel.app";
 
 /**
  * Manual VIP Enterprise Nodes (Added by request)

@@ -1,14 +1,14 @@
 /**
  * Application & Deployment Domain Configuration
  * 
- * Official Single Master Project: mdanmedo-erp-sap-s-4hana-6103-ai-studio
- * Official Live Vercel Domain: https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app
+ * Official Single Master Project: MeDo ERP Cloud (medo-erp-cloud)
+ * Official Live Vercel Domain: https://medo-erp-cloud.vercel.app
  * Official Custom Domain: https://medo-erp.us.ci
  */
 
-export const VERCEL_PROJECT_NAME = "mdanmedo-erp-sap-s-4hana-6103-ai-studio";
-export const OFFICIAL_APP_DOMAIN = "https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app";
-export const VERCEL_APP_DOMAIN = "https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app";
+export const VERCEL_PROJECT_NAME = "medo-erp-cloud";
+export const OFFICIAL_APP_DOMAIN = "https://medo-erp-cloud.vercel.app";
+export const VERCEL_APP_DOMAIN = "https://medo-erp-cloud.vercel.app";
 export const OFFICIAL_CUSTOM_DOMAIN = "https://medo-erp.us.ci";
 export const OFFICIAL_APP_VERSION = "v4.5.2026";
 export const OFFICIAL_BUILD_NUMBER = "BUILD-SAP-6103-REL-2026";

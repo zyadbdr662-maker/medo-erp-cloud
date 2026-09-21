@@ -96,11 +96,11 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
     lastCheck: string;
   } | null>({
     status: "SYNCED",
-    projectName: "mdanmedo-erp-sap-s-4hana-6103-ai-studio",
+    projectName: "medo-erp-cloud",
     version: "v4.5.2026",
     build: "BUILD-SAP-6103-REL-2026",
     date: "20/09/2026",
-    officialUrl: "https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app",
+    officialUrl: "https://medo-erp-cloud.vercel.app",
     customDomain: "https://medo-erp.us.ci",
     vercelStatus: "✅ Live Single Master (Auto-Deploy Active)",
     githubStatus: "✅ Main Branch Synchronized",
@@ -114,11 +114,11 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
       setCheckingUpdate(false);
       setUpdateResult({
         status: "SYNCED",
-        projectName: "mdanmedo-erp-sap-s-4hana-6103-ai-studio",
+        projectName: "medo-erp-cloud",
         version: "v4.5.2026",
         build: "BUILD-SAP-6103-REL-2026",
         date: "20/09/2026",
-        officialUrl: "https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app",
+        officialUrl: "https://medo-erp-cloud.vercel.app",
         customDomain: "https://medo-erp.us.ci",
         vercelStatus: "✅ Live Master Production (Auto-Deploy Active - 200 OK)",
         githubStatus: "✅ Main Branch Repository in Sync",
@@ -606,8 +606,8 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
-                    navigator.clipboard?.writeText("https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app");
-                    alert("تم نسخ الرابط الرسمي المعتمد (mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app)!");
+                    navigator.clipboard?.writeText("https://medo-erp-cloud.vercel.app");
+                    alert("تم نسخ الرابط الرسمي المعتمد (medo-erp-cloud.vercel.app)!");
                   }}
                   className="px-3.5 py-1.5 bg-[#d4af37]/20 hover:bg-[#d4af37]/30 text-[#d4af37] border border-[#d4af37]/40 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
                 >
@@ -633,14 +633,14 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
                     <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 text-[10px] font-mono border border-emerald-500/40">Master Project</span>
                   </div>
                   <div className="font-mono text-[#d4af37] font-bold text-xs sm:text-sm">
-                    mdanmedo-erp-sap-s-4hana-6103-ai-studio
+                    MeDo ERP Cloud (medo-erp-cloud)
                   </div>
                   <div className="font-mono text-cyan-300 font-bold text-xs sm:text-sm break-all pt-1">
-                    https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app
+                    https://medo-erp-cloud.vercel.app
                   </div>
                 </div>
                 <a
-                  href="https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app"
+                  href="https://medo-erp-cloud.vercel.app"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition"
@@ -679,10 +679,10 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
             <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 space-y-2.5">
               <div className="flex items-center gap-2 text-amber-300 font-black text-xs">
                 <AlertTriangle className="w-4 h-4 text-amber-400" />
-                <span>إقرار توحيد بيئة Vercel وحذف المشاريع الخمسة السابقة (Decommissioning Plan):</span>
+                <span>إقرار توحيد بيئة Vercel واعتماد الرابط الرسمي الجديد (medo-erp-cloud):</span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed">
-                لإلغاء أي التباس؛ تم اعتماد مشروع <span className="text-[#d4af37] font-bold font-mono">mdanmedo-erp-sap-s-4hana-6103-ai-studio</span> حصرياً كمصدر رئيسي. المشاريع الـ 5 الأخرى (remix-...-qwf1, ...-zyxf, medo-erp-app, ...-f38p, remix-...-ai-studio) تم استبعادها من منظومة الروابط وتوجيه كافة النداءات للرابط الموحد.
+                لإلغاء أي التباس؛ تم اعتماد مشروع <span className="text-[#d4af37] font-bold font-mono">MeDo ERP Cloud (medo-erp-cloud)</span> والرابط الرسمي <span className="text-cyan-300 font-bold font-mono">https://medo-erp-cloud.vercel.app</span> حصرياً كمصدر رئيسي. المشاريع السابقة تم استبعادها من منظومة الروابط وتوجيه كافة النداءات للرابط الموحد.
               </p>
             </div>
 
@@ -699,7 +699,7 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
                     <span className="text-emerald-400 font-bold">200 OK</span>
                   </div>
                   <p className="text-[11px] text-slate-400">
-                    مشروع <span className="font-mono text-cyan-300">mdanmedo-erp-sap-s-4hana-6103-ai-studio</span> نشط بالنشر التلقائي.
+                    مشروع <span className="font-mono text-cyan-300">medo-erp-cloud</span> نشط بالنشر التلقائي.
                   </p>
                 </div>
 
@@ -733,27 +733,27 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
               <div className="space-y-2 font-mono text-[11px] text-slate-300">
                 <div className="p-2 bg-slate-900 rounded-lg border border-slate-800 break-all">
                   <span className="text-amber-400 font-bold">الرئيسي: </span>
-                  https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[tenant-id]
+                  https://medo-erp-cloud.vercel.app/?tenant=[tenant-id]
                 </div>
                 <div className="p-2 bg-slate-900 rounded-lg border border-slate-800 break-all">
                   <span className="text-blue-400 font-bold">MANAGER: </span>
-                  https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[id]&role=MANAGER&token=AUTH_MGR_[id]&path=/employee/manager
+                  https://medo-erp-cloud.vercel.app/?tenant=[id]&role=MANAGER&token=AUTH_MGR_[id]&path=/employee/manager
                 </div>
                 <div className="p-2 bg-slate-900 rounded-lg border border-slate-800 break-all">
                   <span className="text-emerald-400 font-bold">ACCOUNTANT: </span>
-                  https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[id]&role=ACCOUNTANT&token=AUTH_ACC_[id]&path=/employee/accountant
+                  https://medo-erp-cloud.vercel.app/?tenant=[id]&role=ACCOUNTANT&token=AUTH_ACC_[id]&path=/employee/accountant
                 </div>
                 <div className="p-2 bg-slate-900 rounded-lg border border-slate-800 break-all">
                   <span className="text-cyan-400 font-bold">CASHIER: </span>
-                  https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[id]&role=CASHIER&token=AUTH_SALES_[id]&path=/employee/sales
+                  https://medo-erp-cloud.vercel.app/?tenant=[id]&role=CASHIER&token=AUTH_SALES_[id]&path=/employee/sales
                 </div>
                 <div className="p-2 bg-slate-900 rounded-lg border border-slate-800 break-all">
                   <span className="text-purple-400 font-bold">PURCHASER: </span>
-                  https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[id]&role=PURCHASER&token=AUTH_PUR_[id]&path=/employee/purchase
+                  https://medo-erp-cloud.vercel.app/?tenant=[id]&role=PURCHASER&token=AUTH_PUR_[id]&path=/employee/purchase
                 </div>
                 <div className="p-2 bg-slate-900 rounded-lg border border-slate-800 break-all">
                   <span className="text-rose-400 font-bold">AUDITOR: </span>
-                  https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app/?tenant=[id]&role=AUDITOR&token=AUTH_AUD_[id]&path=/employee/auditor
+                  https://medo-erp-cloud.vercel.app/?tenant=[id]&role=AUDITOR&token=AUTH_AUD_[id]&path=/employee/auditor
                 </div>
               </div>
             </div>

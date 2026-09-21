@@ -227,7 +227,7 @@ export const CentralArchiveSection: React.FC<CentralArchiveSectionProps> = ({
               const fullText = `وثيقة التسليم والإقرار الفني الشامل (MeDo ERP Suite)
 المدير المفوض: بدر عايض محمد - مجموعة بن زياد التجارية المحدودة
 المستودع: https://github.com/zyadbdr662-maker/Mdanmedo-erp-sap-s-4hana-6103.ai.studio
-رابط التشغيل المعتمد: https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app
+رابط التشغيل المعتمد: https://medo-erp-cloud.vercel.app
 النطاق المخصص: https://medo-erp.us.ci
 حالة البيئة: جاهزة ومستقلة 100%`;
               handleCopy(fullText, "quick_handover");
@@ -417,9 +417,9 @@ export const CentralArchiveSection: React.FC<CentralArchiveSectionProps> = ({
                   <div className="p-3 rounded-xl bg-[#071829] border border-slate-800">
                     <div className="text-slate-400 font-bold mb-1">رابط النشر الحي المعتمد (Live Production):</div>
                     <div className="font-mono text-blue-400 font-bold break-all flex items-center justify-between gap-1">
-                      <span>https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app</span>
+                      <span>https://medo-erp-cloud.vercel.app</span>
                       <button
-                        onClick={() => handleCopy("https://mdanmedo-erp-sap-s-4hana-6103-ai-st.vercel.app", "live_url")}
+                        onClick={() => handleCopy("https://medo-erp-cloud.vercel.app", "live_url")}
                         className="p-1 hover:text-white cursor-pointer"
                         title="نسخ"
                       >
