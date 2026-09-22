@@ -718,6 +718,77 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
+        {/* 📰 Featured Article / Announcement: Cost Accounting & Partners Modules */}
+        <div className="my-5 rounded-3xl bg-gradient-to-r from-slate-900 via-emerald-950/60 to-slate-900 border border-emerald-500/40 p-6 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 space-y-4 text-right">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 font-bold">
+                  📰
+                </span>
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <span>مقال رئيسي وتحديث النظام: إطلاق وحدتي محاسبة التكاليف والشركاء</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                      جديد الإصدار 2026
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    بقلم فريق الهندسة والتطوير • مجموعة بن زياد التجارية ومؤسسة MeDo ERP
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setActiveTab("COST_ACCOUNTING")}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>محاسبة التكاليف</span> 📊
+                </button>
+                <button
+                  onClick={() => setActiveTab("PARTNERS")}
+                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>الشركاء والشراكات</span> 🤝
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300 leading-relaxed">
+              <div className="bg-slate-950/70 p-4 rounded-2xl border border-slate-800 space-y-2">
+                <h4 className="font-bold text-emerald-400 text-sm flex items-center gap-2">
+                  <span>📊 1. وحدة محاسبة التكاليف الشاملة (Cost Accounting)</span>
+                </h4>
+                <p>
+                  تمثل محاسبة التكاليف العصب الحساس للمنشآت الصناعية والخدمية. يتيح النظام الجديد في MeDo ERP تتبعاً دقيقاً ومحترفاً لعناصر التكلفة عبر:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-slate-300">
+                  <li><strong>أوامر التكلفة (Job Costing):</strong> فتح أوامر عمل مخصصة للمشاريع والعملاء وحساب تكلفة المواد والأجور والمصروفات بدقة وإصدار بطاقات التكلفة الرسمية.</li>
+                  <li><strong>تكاليف العمليات (Process Costing):</strong> توزيع التكاليف على المراحل الإنتاجية المتتابعة وحساب الوحدات المكافئة وتكلفة الوحدة.</li>
+                  <li><strong>التكاليف على أساس الأنشطة (ABC):</strong> توزيع التكاليف الصناعية غير المباشرة بناءً على محركات التكلفة الفعلية.</li>
+                  <li><strong>التكاليف المعيارية والانحرافات:</strong> مقارنة المعياري بالفعلي لتحديد الانحرافات الملائمة وغير الملائمة الفورية.</li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-950/70 p-4 rounded-2xl border border-slate-800 space-y-2">
+                <h4 className="font-bold text-blue-400 text-sm flex items-center gap-2">
+                  <span>🤝 2. وحدة الشراكات ورؤوس الأموال (Partners & Equity)</span>
+                </h4>
+                <p>
+                  إدارة متكاملة ومشفّرة لعلاقات الشركاء والحصص التأسيسية وفق الأصول القانونية والمحاسبية:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-slate-300">
+                  <li><strong>إدارة حصص الشركاء:</strong> تسجيل المساهمات ورأس المال النقدي والعيني لكل شريك بدقة تامة.</li>
+                  <li><strong>توزيع الأرباح والخسائر:</strong> آليات توزيع مرنة حسب نسب الحصص أو الاتفاقات الخاصة مع توليد القيود المحاسبية الآلية.</li>
+                  <li><strong>مسحوبات الشركاء:</strong> متابعة سحب الأرباح أو السلف الشخصية وتأثيرها المباشر على رأس المال وحسابات الشركاء.</li>
+                  <li><strong>كشف حساب الشريك السيادي:</strong> تقارير مفصلة ومطبوعة تعكس اسم الشركة العميل والترويسة والختم الرسمي بدقة كاملة.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 4 Primary KPI Cards matching exact ASCII wireframe */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 my-4">
           {/* 1. إجمالي الأصول */}
