@@ -1,0 +1,93 @@
+{
+    "name": "MeDo ERP - نظام المحاسبة والمالية المتكامل",
+    "short_name": "MeDo ERP",
+    "description": "نظام محاسبي وإداري سحابي متكامل - ميدو تك للحلول البرمجية",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "background_color": "#0a2540",
+    "theme_color": "#0a2540",
+    "lang": "ar",
+    "dir": "rtl",
+    "categories": ["business", "finance", "productivity"],
+    "icons": [
+        {
+            "src": "/icons/icon-72x72.png",
+            "sizes": "72x72",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-96x96.png",
+            "sizes": "96x96",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-128x128.png",
+            "sizes": "128x128",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-144x144.png",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-152x152.png",
+            "sizes": "152x152",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-384x384.png",
+            "sizes": "384x384",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "فاتورة جديدة",
+            "short_name": "فاتورة",
+            "description": "إنشاء فاتورة مبيعات جديدة",
+            "url": "/?action=new-invoice",
+            "icons": [{ "src": "/icons/shortcut-invoice.png", "sizes": "96x96" }]
+        },
+        {
+            "name": "المنشآت",
+            "short_name": "المنشآت",
+            "description": "إدارة المنشآت",
+            "url": "/?action=tenants",
+            "icons": [{ "src": "/icons/shortcut-tenants.png", "sizes": "96x96" }]
+        },
+        {
+            "name": "التقارير",
+            "short_name": "التقارير",
+            "description": "التقارير المالية",
+            "url": "/?action=reports",
+            "icons": [{ "src": "/icons/shortcut-reports.png", "sizes": "96x96" }]
+        }
+    ],
+    "prefer_related_applications": false,
+    "related_applications": [],
+    "display_override": ["standalone", "minimal-ui", "browser"],
+    "edge_side_panel": {
+        "preferred_width": 400
+    }
+}

@@ -64,6 +64,9 @@ import { LoginModal } from "./components/LoginModal";
 import { CorporateWebsite } from "./components/CorporateWebsite";
 import { SapOnboardingModal } from "./components/SapOnboardingModal";
 import { SystemUpdateModal } from "./components/SystemUpdateModal";
+import { FirstLoginWelcomeModal } from "./components/FirstLoginWelcomeModal";
+import { InstallAppBanner } from "./components/InstallAppBanner";
+import { HybridDevicePanel } from "./components/HybridDevicePanel";
 import { InstantDeployModal } from "./components/InstantDeployModal";
 import { LegalPoliciesModal, LegalPolicyType } from "./components/LegalPoliciesModal";
 import { CookieConsentBanner } from "./components/CookieConsentBanner";
@@ -144,7 +147,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab | "HOME_HUB">(() => {
     return typeof window !== "undefined" && window.innerWidth < 1024 ? "HOME_HUB" : "DASHBOARD";
   });
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth < 1280;
+    }
+    return false;
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [mobileDetailDoc, setMobileDetailDoc] = useState<DetailDocument | null>(null);
@@ -283,6 +291,34 @@ export default function App() {
   });
   const [isSecretGatewayOpen, setIsSecretGatewayOpen] = useState(false);
   const [isTrialManagerOpen, setIsTrialManagerOpen] = useState(false);
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("medo_first_login_welcome") !== "done";
+    }
+    return false;
+  });
+  const [showSplash, setShowSplash] = useState(true);
+  const [isHybridPanelOpen, setIsHybridPanelOpen] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleResize = () => {
+      if (window.innerWidth < 1280) {
+        setSidebarCollapsed(true);
+      } else {
+        setSidebarCollapsed(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize(); // trigger initially
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   /**
    * Central Authentication & Token Security Guard
@@ -296,6 +332,37 @@ export default function App() {
   } => {
     const empFromUrl = TenantIsolationService.parseEmployeeFromUrl();
     if (!empFromUrl) {
+      const savedSwitchedUserRaw = sessionStorage.getItem("medo_switched_user") || localStorage.getItem("medo_switched_user");
+      const savedSwitchedTab = sessionStorage.getItem("medo_switched_tab") || localStorage.getItem("medo_switched_tab");
+      
+      if (savedSwitchedUserRaw) {
+        try {
+          const savedUser = JSON.parse(savedSwitchedUserRaw) as ERPUser;
+          
+          // Actually update React state to restore the switched role upon F5 reload/re-render!
+          setIsAuthenticated(true);
+          sessionStorage.setItem("medo_erp_auth", "true");
+          
+          if (savedSwitchedTab) {
+            setActiveTab(savedSwitchedTab as NavTab);
+          }
+          
+          if (erpState && erpState.currentUser?.role !== savedUser.role) {
+            setErpState((prev) => prev ? ({
+              ...prev,
+              currentUser: savedUser,
+            }) : null);
+          }
+
+          return {
+            isAuthenticated: true,
+            user: savedUser,
+            role: savedUser.role as any,
+            initialTab: (savedSwitchedTab as any) || activeTab,
+          };
+        } catch (e) {}
+      }
+
       return {
         isAuthenticated: sessionStorage.getItem("medo_erp_auth") === "true",
         user: erpState?.currentUser || null,
@@ -469,6 +536,12 @@ export default function App() {
     setIsAuthenticated(true);
     sessionStorage.setItem("medo_erp_auth", "true");
 
+    // Clear switched role storage keys
+    sessionStorage.removeItem("medo_switched_user");
+    localStorage.removeItem("medo_switched_user");
+    sessionStorage.removeItem("medo_switched_tab");
+    localStorage.removeItem("medo_switched_tab");
+
     setErpState((prev) => prev ? ({
       ...prev,
       currentUser: managerUser,
@@ -479,9 +552,11 @@ export default function App() {
     const tenant = mgrSession?.tenantSlug || TenantIsolationService.resolveActiveTenant() || "binziyad";
     const token = mgrSession?.token || "AUTH_MGR_AUTO";
     const newUrl = `${window.location.pathname}?tenant=${tenant}&role=MANAGER&token=${token}&path=/employee/manager`;
-    
+    window.history.pushState({}, "", newUrl);
+
+    setRefreshSuccessMessage("👑 تم العودة بنجاح إلى وضع المدير العام واستعادة كامل الصلاحيات الإدارية والمالية!");
     soundService.playSound("ROYAL_BANK_CHIME");
-    window.location.href = newUrl;
+    setTimeout(() => setRefreshSuccessMessage(null), 5000);
   }, []);
 
   // Handler to Switch to Test Role safely
@@ -543,6 +618,12 @@ export default function App() {
     setIsAdminSessionUnlocked(false);
     localStorage.removeItem("medo_erp_admin_mode");
 
+    // Save switched role in storage to survive page reloads and iframe proxy stripping!
+    sessionStorage.setItem("medo_switched_user", JSON.stringify(newEmpUser));
+    localStorage.setItem("medo_switched_user", JSON.stringify(newEmpUser));
+    sessionStorage.setItem("medo_switched_tab", startTab);
+    localStorage.setItem("medo_switched_tab", startTab);
+
     setErpState((prev) => prev ? ({
       ...prev,
       currentUser: newEmpUser,
@@ -552,9 +633,11 @@ export default function App() {
 
     const tenant = TenantIsolationService.resolveActiveTenant() || "binziyad";
     const newUrl = `${window.location.pathname}?tenant=${tenant}&role=${targetRole}&token=AUTH_${targetRole}_AUTO&path=/employee/${targetRole.toLowerCase()}`;
+    window.history.pushState({}, "", newUrl);
     
+    setRefreshSuccessMessage(`🔄 تم التبديل التجريبي الفوري والآمن إلى دور (${roleTitleAr}). يمكنك العودة لوضع المدير العام في أي وقت!`);
     soundService.playSound("SUCCESS_CHIME");
-    window.location.href = newUrl;
+    setTimeout(() => setRefreshSuccessMessage(null), 5000);
   }, [erpState?.currentUser, handleSwitchBackToManager]);
 
   // ⚡ Priority #1: Central Auth & Token Access Verification Hook (Executes before module load)
@@ -2200,11 +2283,50 @@ export default function App() {
       dir="rtl"
     >
       <AnalyticsTracker />
-      {authLoading ? (
-        <div className="flex items-center justify-center min-h-screen w-full text-slate-400 font-medium">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <span>جاري التحقق من أمان الجلسة والبيئة السحابية...</span>
+      {showSplash || authLoading ? (
+        <div className="fixed inset-0 z-[10000] bg-[#0a2540] flex flex-col items-center justify-between py-12 px-6 text-white text-center select-none animate-fadeIn font-sans" dir="rtl">
+          {/* Top Decorative Empty Spacer */}
+          <div className="h-4" />
+
+          {/* Central Logo & Branding Package */}
+          <div className="flex flex-col items-center gap-6 animate-scaleUp">
+            {/* The Spectacular Golden "M" Badge */}
+            <div className="relative w-36 h-36 rounded-full bg-gradient-to-b from-amber-300 via-amber-500 to-amber-600 p-1 shadow-[0_0_50px_rgba(245,158,11,0.35)] flex items-center justify-center animate-pulse">
+              <div className="absolute inset-[3px] bg-[#0a2540] rounded-full flex flex-col items-center justify-center">
+                {/* Gold Company Logo Header Badge */}
+                <span className="text-[10px] font-black tracking-widest text-amber-500/80 mb-0.5">BZMT</span>
+                
+                {/* The Golden M Letter */}
+                <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-300 via-amber-400 to-amber-600 font-serif">M</span>
+                
+                {/* MeDo word branding */}
+                <span className="text-sm font-black text-white tracking-wide mt-1">MeDo</span>
+              </div>
+            </div>
+
+            {/* Application Identity */}
+            <div className="space-y-2 mt-2">
+              <h1 className="text-3xl font-black text-white tracking-tight flex items-center justify-center gap-2">
+                <span>🏢 MeDo ERP</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-slate-950 border border-amber-400">سحابي أصيل</span>
+              </h1>
+              <p className="text-sm text-amber-200/90 font-medium">
+                نظام إدارة موارد المؤسسات والمالية والمحاسبة المتكامل
+              </p>
+            </div>
+          </div>
+
+          {/* Loading Indicator and Company Sign-off */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-300 bg-slate-950/40 px-4 py-2 rounded-full border border-white/5 shadow-inner">
+              <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+              <span>⏳ جاري الاتصال بالخادم وتهيئة الجلسة الآمنة...</span>
+            </div>
+
+            <div className="text-center mt-4">
+              <p className="text-xs text-slate-400 font-bold tracking-wider">ميدو تك للحلول البرمجية</p>
+              <p className="text-[10px] text-slate-500 mt-0.5" dir="ltr">+967 773 586 047 | bdr.zyad@yandex.com</p>
+            </div>
           </div>
         </div>
       ) : showPatent ? (
@@ -3422,6 +3544,16 @@ export default function App() {
             onClose={() => setIsSovereignRejuvenationOpen(false)}
           />
 
+          {/* Custom First-Login Welcome and Android APK Installer Modal */}
+          <FirstLoginWelcomeModal
+            isOpen={isWelcomeModalOpen}
+            onClose={() => {
+              setIsWelcomeModalOpen(false);
+              localStorage.setItem("medo_first_login_welcome", "done");
+            }}
+            userName={erpState?.currentUser?.name}
+          />
+
           {/* Cookie Consent Banner */}
           <CookieConsentBanner
             onOpenPolicy={() => {
@@ -3429,6 +3561,30 @@ export default function App() {
               setActiveTab("LEGAL_DOCUMENTS");
             }}
           />
+
+          {/* Global PWA Install Banner */}
+          <InstallAppBanner />
+
+          {/* Hybrid Device Controller Panel */}
+          <HybridDevicePanel
+            isOpen={isHybridPanelOpen}
+            onClose={() => setIsHybridPanelOpen(false)}
+            activeBranch={erpState?.currentUser?.branch || "الفرع الرئيسي - صنعاء"}
+          />
+
+          {/* Floating Hardware & Hybrid Device Control Assistant Widget */}
+          <button
+            onClick={() => {
+              setIsHybridPanelOpen(true);
+              soundService.playSound("SUCCESS_CHIME");
+            }}
+            className="fixed bottom-24 left-4 z-40 p-3 rounded-2xl bg-slate-900/90 text-amber-400 border border-amber-500/30 hover:bg-slate-800 hover:text-amber-300 shadow-[0_4px_20px_rgba(0,0,0,0.5)] cursor-pointer flex items-center gap-2 transition-all duration-300 backdrop-blur-md group"
+            title="حقيبة الأجهزة والهجين"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+            <span className="text-xs font-black text-white group-hover:text-amber-200">مساعد الأجهزة والـ PWA</span>
+            <span className="text-lg">⚙️</span>
+          </button>
           
           {/* Mobile Bottom Navigation */}
           <div className="lg:hidden">

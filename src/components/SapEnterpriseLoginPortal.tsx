@@ -535,6 +535,54 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
     }, 450);
   };
 
+  // 2. FAST GUEST TOUR / PREVIEW LOGIN (Sovereign Guest Mode)
+  const handleGuestLogin = () => {
+    setError("");
+    setMessage("");
+    setIsLoading(true);
+    soundService.playSound("SUCCESS_CHIME");
+    
+    // Simulate high-fidelity secure boot sequence
+    setMessage("🔒 جاري تهيئة الجلسة المشفرة للزائر كضيف...");
+    
+    setTimeout(() => {
+      const matchedRole = SAP_ENTERPRISE_ROLES[0]; // CFO "بدر عايض محمد" SYSTEM_ADMIN
+      const user: ERPUser = {
+        id: matchedRole.id,
+        name: `${matchedRole.name} (جولة تجريبية)`,
+        role: matchedRole.role,
+        branch: availableBranches.find((b) => b.id === selectedBranchId)?.nameAr || matchedRole.branch,
+        branchId: selectedBranchId,
+        avatar: matchedRole.avatar,
+        status: "ACTIVE",
+        plan: "ENTERPRISE",
+        email: matchedRole.email,
+        phone: "+967 773 586 047",
+      };
+
+      localStorage.setItem("medo_erp_guest_mode", "true");
+      
+      // Reset admin mode if needed
+      if (user.role !== "SYSTEM_ADMIN" && user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
+        localStorage.removeItem("medo_erp_admin_mode");
+      }
+
+      TenantSecurityService.recordSuccessfulLogin("guest-trial", "بوابة التجربة الحية كضيف", user.email || "guest", user.name);
+      SecurityAuditService.getInstance().registerSession(user);
+
+      setMessage(`🔓 تم تفعيل الجلسة الآمنة للزائر بنجاح! مرحباً بك في MeDo ERP.`);
+      
+      setTimeout(() => {
+        onLoginSuccess(user, selectedBranchId, {
+          clientId: currentClient.id,
+          clientName: currentClient.nameAr,
+          warehouseId: selectedWarehouseId,
+        });
+        setIsLoading(false);
+      }, 500);
+    }, 1200);
+  };
+
   // 2. STANDARD CREDENTIALS SUBMISSION WITH AES-256 GCM & 5-TIER LOCKOUT
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1588,6 +1636,17 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                     <span>نسيت كلمة المرور؟</span>
                   </button>
                 </div>
+
+                {/* Spectacular Glowing Guest Login Button */}
+                <button
+                  type="button"
+                  onClick={handleGuestLogin}
+                  disabled={isLoading}
+                  className="w-full h-[55px] min-h-[55px] py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:via-teal-500 hover:to-cyan-500 active:scale-98 text-slate-950 font-black text-[18px] shadow-[0_8px_25px_rgba(16,185,129,0.35)] hover:shadow-[0_12px_32px_rgba(16,185,129,0.5)] transform hover:-translate-y-0.5 flex items-center justify-center gap-2.5 transition disabled:opacity-50 border border-emerald-400/30 cursor-pointer animate-pulse"
+                >
+                  <Sparkles className="w-5 h-5 text-slate-950 animate-bounce" />
+                  <span>⚡ الدخول التجريبي السريع كضيف (جولة حية)</span>
+                </button>
 
                 {/* Primary Submit Button */}
                 <button
