@@ -73,6 +73,7 @@ import {
 import { ERPUser } from "../types/erp";
 import { BzmtLogo } from "./BzmtLogo";
 import { ShowcaseGallery } from "./ShowcaseGallery";
+import { TenantSecurityGateModal } from "./TenantSecurityGateModal";
 
 export interface SapClientOption {
   id: string;
@@ -1217,12 +1218,15 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
               <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
                 <button
                   type="button"
-                  onClick={() => setShowTenantSelectorModal(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0b2038] hover:bg-[#103055] border border-blue-800/80 text-blue-200 font-bold text-xs shadow-md transition cursor-pointer hover:scale-105"
-                  title="استعراض والذهاب إلى بوابة أي منشأة أو عميل"
+                  onClick={() => {
+                    setShowTenantSelectorModal(true);
+                    soundService.playSound("RADAR_SECURITY");
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#0c2847] to-[#123963] hover:from-[#134173] hover:to-[#1a518e] border border-blue-500/60 text-blue-200 font-bold text-xs shadow-lg shadow-blue-900/30 transition cursor-pointer hover:scale-105"
+                  title="بوابة الدخول المشفر والمؤمن لمنشآت وعملاء المنظومة"
                 >
-                  <Globe className="w-4 h-4 text-blue-400" />
-                  <span>🌐 بوابات المنشآت والعملاء</span>
+                  <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                  <span>🔐 الدخول للمنشآت والعملاء (مشفر)</span>
                 </button>
                 <button
                   type="button"
@@ -2509,112 +2513,11 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
         </div>
       )}
 
-      {/* TENANT SELECTOR MODAL (استعراض والذهاب لبوابة عميل) */}
-      {showTenantSelectorModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-2xl bg-[#06182a] border border-[#d4af37]/60 rounded-3xl p-6 shadow-2xl flex flex-col max-h-[85vh] text-white">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-700/60">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37]">
-                  <Globe className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-white">🌐 اختيار بوابة عميل / منشأة معزولة</h3>
-                  <p className="text-xs text-slate-300">اختر منشأة للدخول المباشر إلى بيئة العمل السحابية المعزولة</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowTenantSelectorModal(false)}
-                className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Search Input */}
-            <div className="py-4">
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
-                <input
-                  type="text"
-                  value={tenantSearchTerm}
-                  onChange={(e) => setTenantSearchTerm(e.target.value)}
-                  placeholder="ابحث باسم الشركة أو المدينة أو المعرف (مثال: الزرقاء، بن زياد، كراع، صنعاء)..."
-                  className="w-full bg-[#030d17] border border-slate-700 rounded-xl pr-10 pl-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
-                />
-              </div>
-            </div>
-
-            {/* Tenants List */}
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar max-h-[45vh]">
-              {preGeneratedTenants
-                .filter((t) => {
-                  if (!tenantSearchTerm) return true;
-                  const term = tenantSearchTerm.toLowerCase();
-                  return (
-                    t.name.toLowerCase().includes(term) ||
-                    t.companyNameAr?.toLowerCase().includes(term) ||
-                    t.city.toLowerCase().includes(term) ||
-                    t.id.toLowerCase().includes(term) ||
-                    t.slug.toLowerCase().includes(term)
-                  );
-                })
-                .slice(0, 30)
-                .map((tenant) => (
-                  <div
-                    key={tenant.id}
-                    className="p-3.5 rounded-2xl bg-[#0a2540]/60 hover:bg-[#0e3153] border border-slate-700/60 hover:border-[#d4af37]/60 transition flex items-center justify-between gap-3 group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
-                        <Building2 className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-white text-sm flex items-center gap-2">
-                          <span>{tenant.name || tenant.companyNameAr}</span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
-                            {tenant.id}
-                          </span>
-                        </div>
-                        <div className="text-xs text-slate-400 flex items-center gap-3 mt-0.5">
-                          <span>📍 {tenant.city}</span>
-                          <span>🏢 {tenant.industry}</span>
-                          {tenant.assignedAdminName && <span>👤 {tenant.assignedAdminName}</span>}
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        try {
-                          localStorage.clear();
-                          sessionStorage.clear();
-                        } catch (e) {}
-                        window.location.href = `?tenant=${tenant.id}`;
-                      }}
-                      className="px-3.5 py-2 rounded-xl bg-[#d4af37] text-[#0a2540] font-black text-xs hover:bg-amber-400 transition cursor-pointer shadow-md shrink-0 group-hover:scale-105"
-                    >
-                      🚀 دخول البوابة
-                    </button>
-                  </div>
-                ))}
-            </div>
-
-            <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-400">
-              <span>إجمالي المنشآت الجاهزة والمعزولة: 200 شركة</span>
-              <button
-                type="button"
-                onClick={() => setShowTenantSelectorModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-slate-700 transition cursor-pointer"
-              >
-                إغلاق
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ENCRYPTED ENTERPRISE & CLIENT SECURITY GATEWAY MODAL */}
+      <TenantSecurityGateModal
+        isOpen={showTenantSelectorModal}
+        onClose={() => setShowTenantSelectorModal(false)}
+      />
 
       {/* MODALS */}
 
