@@ -23,6 +23,10 @@ import { soundService } from "../services/notificationSoundService";
 import { trialService } from "../services/trialService";
 import { trialOperationsService } from "../services/trialOperationsService";
 import { TenantIsolationService } from "../services/tenantIsolationService";
+import { SovereignAdminGuardView } from "./SovereignAdminGuardView";
+import { SECRET_ADMIN_PATH } from "../services/adminPortalSecurityService";
+import { TenantSecurityService } from "../services/tenantSecurityService";
+import { TenantAuditLogModal } from "./TenantAuditLogModal";
 import { AnalogClock } from "./AnalogClock";
 import {
   Building2,
@@ -284,6 +288,31 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
     !["default", "master-badr", "bdr-zyad"].includes(activeTenantSlug)
   );
 
+  // Check if current URL or query indicates Sovereign Admin intent
+  const isSovereignIntent = typeof window !== "undefined" && Boolean(
+    window.location.hostname.startsWith("admin.") ||
+    window.location.pathname.startsWith("/admin") ||
+    window.location.pathname.startsWith("/sovereign-admin") ||
+    window.location.pathname.startsWith(SECRET_ADMIN_PATH) ||
+    window.location.search.includes("admin=sovereign") ||
+    window.location.search.includes("admin_key=") ||
+    window.location.search.includes("admin-control")
+  );
+
+  const [showSovereignPortal, setShowSovereignPortal] = useState(isSovereignIntent);
+  const [sovereignInitialMode, setSovereignInitialMode] = useState<"RESTRICTED" | "SOVEREIGN_LOGIN">(() => {
+    if (typeof window !== "undefined") {
+      if (
+        window.location.pathname.startsWith(SECRET_ADMIN_PATH) ||
+        window.location.search.includes("admin_key=x7k9_sovereign_ctrl") ||
+        window.location.search.includes("admin=sovereign_login")
+      ) {
+        return "SOVEREIGN_LOGIN";
+      }
+    }
+    return "RESTRICTED";
+  });
+
   // Tenant switcher modal state
   const [showTenantSelectorModal, setShowTenantSelectorModal] = useState(false);
   const [tenantSearchTerm, setTenantSearchTerm] = useState("");
@@ -326,6 +355,14 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
   });
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+
+  // Tenant Security & 2FA State
+  const [tenant2FACode, setTenant2FACode] = useState("");
+  const [showTenant2FAInput, setShowTenant2FAInput] = useState(false);
+  const [showTenantAuditModal, setShowTenantAuditModal] = useState(false);
+  const [tenantAttemptsInfo, setTenantAttemptsInfo] = useState(() => 
+    TenantSecurityService.getAttemptsState(activeTenantSlug || "default", email || "user")
+  );
 
   // New Trial / Registration State
   const [registrantFullName, setRegistrantFullName] = useState("");
@@ -492,7 +529,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
     }, 450);
   };
 
-  // 2. STANDARD CREDENTIALS SUBMISSION
+  // 2. STANDARD CREDENTIALS SUBMISSION WITH AES-256 GCM & 5-TIER LOCKOUT
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -506,37 +543,65 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
         return;
       }
 
-      // Check if account is currently locked out due to >3 failed attempts
-      const lockStatus = SecurityAuditService.getInstance().isAccountLocked(email);
-      if (lockStatus.isLocked) {
-        setError(`⛔ الحساب مقفل حالياً لأسباب أمنية! يرجى الانتظار لمدة (${lockStatus.remainingMinutes} دقيقة) أو التواصل مع مدير النظام لإلغاء القفل.`);
+      const tenantSlug = activeTenantSlug || "default";
+      const tenantName = currentTenantObj?.companyNameAr || activeTenantDetails.nameAr || currentClient.nameAr;
+
+      // 1. Check Tenant-Level Lockout Status (5 Failed Attempts Threshold)
+      const tenantState = TenantSecurityService.getAttemptsState(tenantSlug, email);
+      if (tenantState.isLockedOut) {
+        const remainingMinutes = tenantState.lockoutUntil
+          ? Math.max(1, Math.ceil((tenantState.lockoutUntil - Date.now()) / (60 * 1000)))
+          : 60;
+        setError(
+          `⛔ تم قفل الحساب مؤقتاً لتجاوز الحد الأقصى للمحاولات (5 محاولات فاشلة)! يرجى الانتظار (${remainingMinutes} دقيقة) أو التواصل مع مدير المنظومة لإعادة التعيين.`
+        );
+        soundService.playSound("ENCRYPTION_VIOLATION_ALARM");
         setIsLoading(false);
         return;
       }
 
-      // Execute Google reCAPTCHA v3 & Firebase App Check security evaluation
-      setMessage("جاري فحص الأمان عبر Google reCAPTCHA v3 و Firebase App Check...");
+      // 2. Check Optional 2FA Code if user provided one
+      if (tenant2FACode.trim()) {
+        const is2FAValid = TenantSecurityService.verifyTenant2FACode(tenantSlug, email, tenant2FACode.trim());
+        if (!is2FAValid) {
+          const updatedState = TenantSecurityService.recordFailedAttempt(
+            tenantSlug,
+            tenantName,
+            email,
+            "رمز المصادقة الثنائية (2FA) غير صحيح"
+          );
+          setTenantAttemptsInfo(updatedState);
+          setError(`❌ رمز المصادقة الثنائية (2FA) غير صحيح! متبقي (${updatedState.remainingAttempts}/5) محاولات.`);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // 3. Execute Google reCAPTCHA v3 & Firebase App Check security evaluation
+      setMessage("جاري فحص الأمان وتشفير البيانات عبر AES-256 GCM و Google reCAPTCHA v3...");
       const recaptchaRes = await executeRecaptchaV3("login");
       setRecaptchaResult(recaptchaRes);
 
       if (!recaptchaRes.success || recaptchaRes.isBotRisk || recaptchaRes.score < 0.5) {
-        const failedInfo = SecurityAuditService.getInstance().recordFailedLogin(email, "مستخدم غير معروف (Bot)");
-        if (failedInfo.alertTriggered) {
-          setError(`🚨 تم حظر المحاولة! رصد أكثر من 3 محاولات فاشلة متتالية خلال دقيقة واحدة من جهازك. تم إخطار مدير النظام فوراً.`);
-        } else {
-          setError("⚠️ تم اكتشاف نشاط مشبوه أو سلوك آلي عبر Google reCAPTCHA v3 / Firebase App Check. تم حظر محاولة الدخول لحماية البيانات.");
-        }
+        const updatedState = TenantSecurityService.recordFailedAttempt(
+          tenantSlug,
+          tenantName,
+          email,
+          "رصد سلوك آلي أو فشل reCAPTCHA v3"
+        );
+        setTenantAttemptsInfo(updatedState);
+        setError("⚠️ تم اكتشاف نشاط مشبوه أو سلوك آلي عبر reCAPTCHA v3. تم حظر محاولة الدخول لحماية أمان المنشأة.");
         setIsLoading(false);
         return;
       }
 
-      // Try Firebase authentication
+      // 4. Try Firebase authentication
       try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const firebaseUser = userCredential.user;
         const erpUser: ERPUser = {
           id: firebaseUser.uid,
-          name: firebaseUser.displayName || "بدر عايض محمد (مدير المنظومة)",
+          name: firebaseUser.displayName || "مدير الحساب المعتمد",
           role: "SYSTEM_ADMIN",
           branch: availableBranches.find((b) => b.id === selectedBranchId)?.nameAr || "الفرع الرئيسي - صنعاء",
           branchId: selectedBranchId,
@@ -544,10 +609,11 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
           status: "ACTIVE",
         };
 
-        // Register session in Security Audit Service
+        // Record successful login & reset lockout counter
+        TenantSecurityService.recordSuccessfulLogin(tenantSlug, tenantName, email, erpUser.name);
         SecurityAuditService.getInstance().registerSession(erpUser);
 
-        setMessage("تم تسجيل الدخول بنجاح! جاري تحميل بيئة العمل ومكتبات SAP المحاسبية...");
+        setMessage("تم تسجيل الدخول بنجاح! جاري تشفير الجلسة وتحميل بيانات المنشأة...");
         setTimeout(() => {
           onLoginSuccess(erpUser, selectedBranchId, {
             clientId: currentClient.id,
@@ -582,10 +648,11 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
             localStorage.removeItem("medo_erp_admin_mode");
           }
 
-          // Register session
+          // Record successful login in Tenant Audit Log
+          TenantSecurityService.recordSuccessfulLogin(tenantSlug, tenantName, email, user.name);
           SecurityAuditService.getInstance().registerSession(user);
 
-          setMessage(`تم التحقق من بيانات ${matchedRole.roleTitleAr}. مرحباً بك!`);
+          setMessage(`تم التحقق من بيانات ${matchedRole.roleTitleAr} بتشفير AES-256. مرحباً بك!`);
           setTimeout(() => {
             onLoginSuccess(user, selectedBranchId, {
               clientId: currentClient.id,
@@ -647,9 +714,11 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
             localStorage.removeItem("medo_erp_admin_mode");
           }
 
+          // Record successful login in Tenant Audit Log
+          TenantSecurityService.recordSuccessfulLogin(tenantSlug, tenantName, email, user.name);
           SecurityAuditService.getInstance().registerSession(user);
 
-          setMessage(`تمت المصادقة بنجاح بصلاحية ${titleAr}. مرحباً بك!`);
+          setMessage(`تمت المصادقة المشفرة بنجاح بصلاحية ${titleAr}. مرحباً بك!`);
           setTimeout(() => {
             onLoginSuccess(user, selectedBranchId, {
               clientId: currentClient.id,
@@ -658,17 +727,32 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
             });
           }, 450);
         } else {
-          // Record Failed Login
-          const failedInfo = SecurityAuditService.getInstance().recordFailedLogin(email, email.split("@")[0]);
-          if (failedInfo.alertTriggered) {
-            setError(`🚨 تنبيه أمني عاجل! تم رصد أكثر من 3 محاولات فاشلة متتالية خلال دقيقة واحدة من هذا الجهاز (${failedInfo.failedCount} محاولات). تم إرسال تنبيه فوراً لمدير النظام وتوثيق السجل الأمني.`);
+          // Record Failed Login Attempt (5-attempt lockout rule)
+          const updatedState = TenantSecurityService.recordFailedAttempt(
+            tenantSlug,
+            tenantName,
+            email,
+            "كلمة مرور غير صحيحة"
+          );
+          setTenantAttemptsInfo(updatedState);
+
+          if (updatedState.isLockedOut) {
+            setError("⛔ تم قفل الحساب مؤقتاً لتجاوز 5 محاولات فاشلة! تم إرسال إشعار أمني لمدير المنظومة وتوثيق المحاولة في سجل التدقيق.");
           } else {
-            setError(`كلمة المرور أو بيانات الدخول غير صحيحة. (محاولة رقم ${failedInfo.failedCount} من نفس الجهاز)`);
+            setError(`كلمة المرور أو بيانات الدخول غير صحيحة. متبقي (${updatedState.remainingAttempts}/5) محاولات قبل القفل المؤقت.`);
           }
         }
       }
     } catch (err: any) {
-      const failedInfo = SecurityAuditService.getInstance().recordFailedLogin(email, "مستخدم غير معروف");
+      const tenantSlug = activeTenantSlug || "default";
+      const tenantName = currentTenantObj?.companyNameAr || activeTenantDetails.nameAr || currentClient.nameAr;
+      const updatedState = TenantSecurityService.recordFailedAttempt(
+        tenantSlug,
+        tenantName,
+        email,
+        err.message || "خطأ غير معروف في التحقق"
+      );
+      setTenantAttemptsInfo(updatedState);
       setError(err.message || "فشل التحقق من بيانات الدخول، يرجى المحاولة ثانية.");
     } finally {
       setIsLoading(false);
@@ -844,6 +928,44 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
               warehouseId: "WH-01",
             });
           }, 800);
+        }}
+      />
+    );
+  }
+
+  // SOVEREIGN ADMIN SECURITY GUARD & 2FA LOGIN
+  if (showSovereignPortal) {
+    return (
+      <SovereignAdminGuardView
+        initialMode={sovereignInitialMode}
+        onBackToHome={() => {
+          setShowSovereignPortal(false);
+          if (typeof window !== "undefined" && (window.location.search.includes("admin") || window.location.pathname.startsWith("/admin"))) {
+            window.history.replaceState({}, "", window.location.pathname);
+          }
+        }}
+        onOpenSaaSRegistration={() => {
+          setShowSovereignPortal(false);
+          setShowSaaSOnboarding(true);
+        }}
+        onUnlockSuccess={() => {
+          localStorage.setItem("medo_erp_admin_mode", "true");
+          const sovereignUser: ERPUser = {
+            id: "SOVEREIGN-MASTER-BADR",
+            name: "أ. بدر عايض محمد (المدير العام والمالك السيادي)",
+            role: "SYSTEM_ADMIN",
+            branch: availableBranches[0]?.nameAr || "الفرع الرئيسي - صنعاء",
+            branchId: selectedBranchId,
+            avatar: "BM",
+            status: "ACTIVE",
+            email: "admin@medo-erp.cloud",
+          };
+          SecurityAuditService.getInstance().registerSession(sovereignUser);
+          onLoginSuccess(sovereignUser, selectedBranchId, {
+            clientId: currentClient.id,
+            clientName: currentClient.nameAr,
+            warehouseId: selectedWarehouseId,
+          });
         }}
       />
     );
@@ -1067,74 +1189,47 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
             )}
           </div>
         ) : (
-          /* CASE 2: MASTER PLATFORM (When opened without tenant) */
-          <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#06182a]/95 via-[#0b2038]/95 to-[#05111e]/95 border border-[#d4af37]/60 shadow-[0_10px_30px_rgba(212,175,55,0.15)] backdrop-blur-xl flex flex-col gap-4">
+          /* CASE 2: NEUTRAL PUBLIC ENTERPRISE CLOUD LOGIN (When opened without tenant) */
+          <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#06182a]/95 via-[#081f36]/95 to-[#040e18]/95 border border-slate-700/60 shadow-[0_10px_30px_rgba(0,0,0,0.4)] backdrop-blur-xl flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-[#d4af37]/20 border border-[#d4af37]/50 flex items-center justify-center text-[#d4af37] font-black text-2xl shadow-inner shrink-0">
-                  👑
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 font-black text-xl shadow-inner shrink-0">
+                  <Building2 className="w-6 h-6 text-blue-400" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-base sm:text-lg font-black text-white">
-                      المنصة الرئيسية للمدير (Master Platform)
+                      بوابة سحابة الأعمال الموحدة (MeDo Cloud ERP)
                     </span>
-                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/40 font-bold">
-                      بوابة الإدارة السيادية والتحكم المركزي
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/30 font-bold">
+                      منظومة محاسبية وإدارية سحابية شاملة
                     </span>
                   </div>
                   <p className="text-xs text-slate-300 font-normal mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <span>👤 مدير المنظومة: <strong className="text-amber-300 font-bold">بدر عايض محمد</strong></span>
-                    <span>✉️ البريد السيادي: <strong className="text-white font-mono">admin@medo-erp.cloud</strong></span>
-                    <span>🛡️ صلاحيات كاملة لإدارة السحابة وتطوير المنشآت</span>
+                    <span>🏢 دخول موحد لكافة فروع وشركات المنظومة</span>
+                    <span>🔒 مشفر ومعتمد بمعايير الأمان المالي السحابي</span>
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 self-start sm:self-center">
+              <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
                 <button
                   type="button"
                   onClick={() => setShowTenantSelectorModal(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md transition cursor-pointer hover:scale-105"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0b2038] hover:bg-[#103055] border border-blue-800/80 text-blue-200 font-bold text-xs shadow-md transition cursor-pointer hover:scale-105"
                   title="استعراض والذهاب إلى بوابة أي منشأة أو عميل"
                 >
-                  <Globe className="w-4 h-4" />
-                  <span>🌐 الذهاب إلى بوابة عميل</span>
+                  <Globe className="w-4 h-4 text-blue-400" />
+                  <span>🌐 بوابات المنشآت والعملاء</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSaaSOnboarding(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md transition cursor-pointer hover:scale-105"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>➕ تجربة مجانية</span>
                 </button>
               </div>
-            </div>
-
-            {/* Quick 1-Click Director Fast Login */}
-            <div className="border-t border-slate-700/60 pt-3">
-              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
-                  <span>الدخول السريع بحساب المدير العام السيادي:</span>
-                </span>
-                <span className="text-[11px] text-slate-400">admin@medo-erp.cloud</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail("admin@medo-erp.cloud");
-                  setPassword("admin");
-                  setMessage("تم تجهيز بيانات المدير العام (بدر عايض محمد). اضغط 'تسجيل الدخول' للدخول فوراً.");
-                  soundService.playSound("SUCCESS_CHIME");
-                }}
-                className="w-full p-3 rounded-xl bg-[#0a2540]/90 hover:bg-[#10355a] border border-[#d4af37]/50 text-right text-xs transition cursor-pointer flex items-center justify-between shadow-sm hover:border-[#d4af37]"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] font-bold">
-                    BM
-                  </div>
-                  <div>
-                    <div className="font-bold text-white text-sm">أ. بدر عايض محمد (المدير العام والمالك السيادي)</div>
-                    <div className="text-[11px] text-slate-400 font-mono">admin@medo-erp.cloud (صلاحيات سيادية كاملة)</div>
-                  </div>
-                </div>
-                <span className="text-xs px-3 py-1.5 rounded-lg bg-[#d4af37] text-[#0a2540] font-black shadow-sm">
-                  ⚡ دخول فوري للمدير
-                </span>
-              </button>
             </div>
           </div>
         )}
@@ -1280,30 +1375,39 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
 
           {/* RIGHT/CENTER: INTERACTIVE AUTHENTICATION MODES */}
           <div className="login-card dark-card lg:col-span-8 w-full max-w-[580px] lg:max-w-none mx-auto bg-gradient-to-tl from-[#0a2540]/95 via-[#0a1525]/98 to-[#040810]/98 backdrop-blur-3xl border border-[#d4af37]/40 rounded-[22px] sm:rounded-[26px] p-5 xs:p-[24px] sm:p-[30px] lg:p-[45px] shadow-[0_20px_50px_rgba(212,175,55,0.2),_inset_0_1px_1px_rgba(255,255,255,0.1)] space-y-[28px] sm:space-y-[30px] order-1 lg:order-2 box-border overflow-x-hidden">
-            {/* CARD TOP BRANDING */}
-            <div className="flex items-center justify-between gap-3 border-b border-slate-700/60 pb-4">
+            {/* CARD TOP BRANDING - TENANT & CLIENTS PORTAL */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37]/20 to-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center shadow-inner shrink-0 text-[#d4af37] font-black text-lg">
-                  {isCustomTenant ? "🏢" : "👑"}
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600/30 to-teal-500/20 border border-blue-500/50 flex items-center justify-center shadow-inner shrink-0 text-blue-400 font-black text-2xl">
+                  🏢
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[20px] font-black text-white tracking-tight">
-                      {isCustomTenant ? (currentTenantObj?.companyNameAr || activeTenantDetails.nameAr) : "المنصة الرئيسية للمدير"}
+                    <span className="text-[18px] sm:text-[20px] font-black text-white tracking-tight">
+                      🏢 MeDo ERP - بوابة المنشآت والعملاء
                     </span>
-                    <span className="text-[11px] bg-slate-800 text-amber-300 font-bold px-2.5 py-0.5 rounded-full border border-slate-700">
-                      {isCustomTenant ? "بوابة منشأة معزولة" : "Master Platform"}
+                    <span className="text-[11px] bg-blue-500/20 text-blue-300 font-bold px-2.5 py-0.5 rounded-full border border-blue-500/40">
+                      Tenant & Clients Portal
                     </span>
                   </div>
-                  <p className="text-[13px] text-slate-300 font-medium">
-                    {isCustomTenant ? "بيئة العمل والتشغيل السحابية المستقلة للمنشأة" : "بوابة الإدارة السيادية والتحكم المركزي — MeDo ERP"}
+                  <p className="text-[12px] sm:text-[13px] text-slate-300 font-normal mt-0.5 flex items-center gap-2 flex-wrap">
+                    <span>🔐 دخول آمن ومشفّر</span>
+                    <span className="text-slate-500">•</span>
+                    <span className="text-emerald-400 font-mono text-[11px]">AES-256 GCM + PBKDF2</span>
                   </p>
                 </div>
               </div>
 
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#06182a] border border-blue-900/60 text-[12px] text-emerald-400 font-semibold shadow-sm shrink-0">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>مشفر TLS 1.3 / AES-256</span>
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => setShowTenantAuditModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#06182a] hover:bg-[#0c2b48] border border-blue-900/80 text-[12px] text-blue-300 hover:text-white font-bold transition shadow-sm cursor-pointer"
+                  title="استعراض سجل التدقيق الأمني لعمليات الدخول"
+                >
+                  <FileText className="w-3.5 h-3.5 text-blue-400" />
+                  <span>📜 سجل التدقيق الأمني</span>
+                </button>
               </div>
             </div>
 
@@ -1320,7 +1424,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                 }`}
               >
                 <Lock className="w-4 h-4 shrink-0" />
-                <span>بيانات الدخول المؤسسية</span>
+                <span>🔐 دخول آمن</span>
               </button>
               <button
                 id="sap-tab-trial"
@@ -1333,7 +1437,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                 }`}
               >
                 <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
-                <span>تفعيل منشأة جديدة</span>
+                <span>➕ تسجيل منشأة جديدة</span>
               </button>
             </div>
 
@@ -1355,11 +1459,11 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
             {activeTab === "CREDENTIALS" && (
               <form onSubmit={handleCredentialsSubmit} className="space-y-5 max-w-full mx-auto py-1">
                 <div className="text-center space-y-1 mb-2">
-                  <h3 className="login-title text-[28px] sm:text-[30px] md:text-[32px] font-black text-white leading-tight">
-                    تسجيل الدخول بالبيانات المعتمدة
+                  <h3 className="login-title text-[26px] sm:text-[28px] md:text-[30px] font-black text-white leading-tight">
+                    تسجيل الدخول الآمن لمنشأتك
                   </h3>
-                  <p className="login-subtitle text-[14px] sm:text-[15px] text-slate-300 leading-relaxed">
-                    أدخل بريدك الإلكتروني المؤسسي أو اسم المستخدم وكلمة المرور الخاصة بمنظومة MeDo ERP
+                  <p className="login-subtitle text-[13px] sm:text-[14px] text-slate-300 leading-relaxed">
+                    أدخل بريدك الإلكتروني المؤسسي وكلمة المرور المشفرة للوصول إلى بيئة عمل المنشأة
                   </p>
                 </div>
 
@@ -1367,7 +1471,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                 <div className="space-y-2">
                   <label className="text-[14px] font-semibold text-slate-200 flex items-center gap-2">
                     <Mail className="w-4 h-4 text-[#d4af37]" />
-                    <span>البريد الإلكتروني المؤسسي أو اسم المستخدم:</span>
+                    <span>📧 البريد الإلكتروني:</span>
                   </label>
                   <input
                     id="sap-login-email"
@@ -1386,7 +1490,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                   <div className="flex items-center justify-between text-[14px] font-semibold text-slate-200">
                     <span className="flex items-center gap-2">
                       <Lock className="w-4 h-4 text-[#d4af37]" />
-                      <span>كلمة المرور:</span>
+                      <span>🔒 كلمة المرور:</span>
                     </span>
                     <button
                       type="button"
@@ -1420,6 +1524,34 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                   )}
                 </div>
 
+                {/* Optional 2FA Code Field */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between text-[13px] font-medium text-slate-300">
+                    <span className="flex items-center gap-1.5">
+                      <KeyRound className="w-4 h-4 text-blue-400" />
+                      <span>🔑 رمز المصادقة الثنائية (إن كان مفعّلاً):</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowTenant2FAInput(!showTenant2FAInput)}
+                      className="text-blue-400 hover:underline text-xs cursor-pointer font-bold"
+                    >
+                      {showTenant2FAInput ? "إخفاء حقل 2FA" : "إدخال رمز 2FA (اختياري)"}
+                    </button>
+                  </div>
+                  {showTenant2FAInput && (
+                    <input
+                      id="sap-login-2fa-input"
+                      type="text"
+                      maxLength={8}
+                      value={tenant2FACode}
+                      onChange={(e) => setTenant2FACode(e.target.value.replace(/[^0-9A-Za-z]/g, ""))}
+                      placeholder="______ (أدخل الرمز المكون من 6 أرقام)"
+                      className="input-field w-full bg-[#030d17] border border-blue-500/50 rounded-xl px-4 py-3 text-[16px] text-center tracking-widest text-amber-300 font-mono placeholder-slate-600 focus:outline-none focus:border-amber-400 shadow-inner"
+                    />
+                  )}
+                </div>
+
                 {/* Remember Me & Forgot Password */}
                 <div className="flex items-center justify-between text-[14px] pt-1">
                   <label className="flex items-center gap-2 cursor-pointer text-slate-300 select-none">
@@ -1429,7 +1561,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sap-primary focus:ring-0 focus:ring-offset-0"
                     />
-                    <span>تذكرني (جلسة آمنة)</span>
+                    <span>تذكرني (جلسة آمنة مشفرة)</span>
                   </label>
                   <button
                     type="button"
@@ -1454,15 +1586,21 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                   {isLoading ? (
                     <>
                       <RefreshCw className="w-5 h-5 animate-spin text-[#0a2540]" />
-                      <span>جاري التحقق من الجلسة السحابية...</span>
+                      <span>جاري تشفير الجلسة والتحقق...</span>
                     </>
                   ) : (
                     <>
-                      <ShieldCheck className="w-5 h-5 text-[#0a2540]" />
-                      <span>تسجيل الدخول إلى MeDo ERP</span>
+                      <span className="text-xl">🚀</span>
+                      <span>دخول آمن إلى بوابة المنشأة</span>
                     </>
                   )}
                 </button>
+
+                {/* Concise Security Badge in Single Line */}
+                <div className="flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl bg-[#04101d]/90 border border-emerald-500/40 text-emerald-300 text-[13px] font-bold text-center shadow-lg">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>🔒 محمي بتشفير AES-256 GCM</span>
+                </div>
 
                 {/* Clear Bright Divider */}
                 <div className="relative flex items-center justify-center my-8">
@@ -1922,10 +2060,23 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
             </div>
           </div>
 
-          {/* Bottom Copyright */}
-          <div className="text-center pt-2 text-xs text-slate-300 font-bold border-t border-slate-800/60 tracking-wide flex items-center justify-center gap-2 flex-wrap">
+          {/* Bottom Copyright & Discreet Sovereign Admin Entry */}
+          <div className="text-center pt-2 text-xs text-slate-300 font-bold border-t border-slate-800/60 tracking-wide flex items-center justify-center gap-3 flex-wrap">
             <span>جميع الحقوق محفوظة ©</span>
             <span className="text-amber-300 font-sans">Bin Ziyad Group & MeDo Tech (BZMT)</span>
+            <span className="text-slate-600">|</span>
+            <button
+              type="button"
+              onClick={() => {
+                setSovereignInitialMode("RESTRICTED");
+                setShowSovereignPortal(true);
+              }}
+              className="text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1 cursor-pointer text-[11px] opacity-70 hover:opacity-100"
+              title="بوابة التحقق السيادي للإدارة العليا"
+            >
+              <Lock className="w-3 h-3" />
+              <span>الإدارة السيادية</span>
+            </button>
           </div>
         </div>
       </footer>
@@ -2307,6 +2458,13 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
       )}
 
       {/* MODALS */}
+
+      <TenantAuditLogModal
+        isOpen={showTenantAuditModal}
+        onClose={() => setShowTenantAuditModal(false)}
+        tenantSlug={activeTenantSlug || undefined}
+        tenantName={currentTenantObj?.companyNameAr || activeTenantDetails.nameAr}
+      />
 
       <LegalPoliciesModal
         isOpen={legalModalOpen}

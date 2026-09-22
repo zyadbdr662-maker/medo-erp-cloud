@@ -72,9 +72,25 @@ export const SECRET_ADMIN_QUERY_KEY = "admin_key";
 export const SECRET_ADMIN_QUERY_VALUE = "x7k9_sovereign_ctrl";
 export const MASTER_DEVICE_ENROLL_PIN = "MEDO-ENROLL-2026-BADR";
 
-// Default Master Password
+// Default Master Password & Contacts
 export const DEFAULT_MASTER_PASSWORD_PLAIN = "MeDo@Master#2026!Sovereign";
 export const MASTER_ADMIN_EMAIL = "zyadbdr925@gmail.com";
+export const SOVEREIGN_ADMIN_EMAIL = "admin@medo-erp.cloud";
+export const MASTER_ADMIN_WHATSAPP = "+0967773586047";
+export const MASTER_DIRECTOR_NAME = "بدر عايض محمد";
+
+export const EMERGENCY_BACKUP_CODES = [
+  "AB12-CD34",
+  "EF56-GH78",
+  "7735-8604",
+  "2026-9250",
+  "MEDO-SAFE-01",
+  "SOV-9988-AA",
+  "SEC-4411-BB",
+  "KEY-8822-CC",
+  "EMG-3300-DD",
+  "ADM-7711-EE",
+];
 
 export class AdminPortalSecurityService {
   private static cachedFingerprint: string | null = null;
@@ -292,7 +308,7 @@ export class AdminPortalSecurityService {
       code,
       secondsRemaining,
       secret,
-      backupCodes: ["773586", "202692", "852963", "987654"]
+      backupCodes: EMERGENCY_BACKUP_CODES,
     };
   }
 
@@ -300,7 +316,7 @@ export class AdminPortalSecurityService {
    * Verifies the 6-digit Authenticator 2FA code
    */
   public static verify2FACode(codeAttempt: string): boolean {
-    const clean = codeAttempt.trim().replace(/\s+/g, "");
+    const clean = codeAttempt.trim().replace(/[\s-]+/g, "").toUpperCase();
     if (!clean || clean.length < 6) return false;
 
     const epoch = Math.floor(Date.now() / 1000);
@@ -324,9 +340,12 @@ export class AdminPortalSecurityService {
       }
     }
 
-    // Emergency backup codes
-    const emergencyCodes = ["773586", "202692", "852963", "987654", "654321", "123456"];
-    return emergencyCodes.includes(clean);
+    // Emergency backup codes check
+    const normalizedBackupCodes = EMERGENCY_BACKUP_CODES.map((c) => c.replace(/[\s-]+/g, "").toUpperCase());
+    return (
+      normalizedBackupCodes.includes(clean) ||
+      ["773586", "202692", "852963", "987654", "654321", "123456"].includes(clean)
+    );
   }
 
   /**
@@ -726,7 +745,12 @@ export class AdminPortalSecurityService {
   }
 
   /**
-   * Rate Limit & Lockout Logic (3 Attempts / 24 Hours Lockout)
+   * Rate Limit & Multi-Tier Lockout Logic:
+   * Attempt 1: Warning
+   * Attempt 2: Warning + Security Alert Dispatch
+   * Attempt 3: 1 Hour Lockout
+   * Attempt 4: 24 Hours Lockout
+   * Attempt 5+: Permanent Lockout
    */
   private static getAttemptsState(): {
     failedCount: number;
@@ -747,9 +771,15 @@ export class AdminPortalSecurityService {
     const newCount = state.failedCount + 1;
     let lockoutUntil = state.lockoutUntil;
 
-    if (newCount >= 3) {
-      // 24 hours lockout
+    if (newCount === 3) {
+      // 1 hour lockout on 3rd failed attempt
+      lockoutUntil = Date.now() + 1 * 60 * 60 * 1000;
+    } else if (newCount === 4) {
+      // 24 hours lockout on 4th failed attempt
       lockoutUntil = Date.now() + 24 * 60 * 60 * 1000;
+    } else if (newCount >= 5) {
+      // Permanent lockout on 5+ failed attempts (requires sovereign admin reset)
+      lockoutUntil = Date.now() + 365 * 24 * 60 * 60 * 1000;
     }
 
     localStorage.setItem(
@@ -760,6 +790,20 @@ export class AdminPortalSecurityService {
         lastFailedAt: Date.now(),
       })
     );
+
+    // If attempt 2 or higher, dispatch urgent alert
+    if (newCount >= 2) {
+      this.dispatchSecurityAlert(
+        `🚨 محاولة دخول فاشلة للإدارة السيادية (${newCount}/5)`,
+        `تم تسجيل محاولة دخول غير مصرح بها للبوابة السيادية. المحاولة رقم ${newCount}. حالة القفل: ${
+          lockoutUntil ? "تم قفل البوابة مؤقتاً" : "تحذير مسبق"
+        }. تم التوثيق وإرسال إشعار فوري إلى ${MASTER_ADMIN_EMAIL} وواتساب ${MASTER_ADMIN_WHATSAPP}`,
+        newCount >= 3 ? "CRITICAL" : "HIGH",
+        {
+          remainingAttempts: Math.max(0, 3 - newCount),
+        }
+      );
+    }
 
     return Math.max(0, 3 - newCount);
   }
