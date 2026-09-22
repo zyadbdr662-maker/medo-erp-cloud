@@ -74,6 +74,7 @@ import { ERPUser } from "../types/erp";
 import { BzmtLogo } from "./BzmtLogo";
 import { ShowcaseGallery } from "./ShowcaseGallery";
 import { TenantSecurityGateModal } from "./TenantSecurityGateModal";
+import { SaaSRegistrationSecurityGateModal } from "./SaaSRegistrationSecurityGateModal";
 
 export interface SapClientOption {
   id: string;
@@ -317,6 +318,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
 
   // Tenant switcher modal state
   const [showTenantSelectorModal, setShowTenantSelectorModal] = useState(false);
+  const [showSaaSSecurityGate, setShowSaaSSecurityGate] = useState(false);
   const [tenantSearchTerm, setTenantSearchTerm] = useState("");
 
   const customTenantClientOption: SapClientOption | null = isCustomTenant
@@ -1230,11 +1232,15 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowSaaSOnboarding(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md transition cursor-pointer hover:scale-105"
+                  onClick={() => {
+                    setShowSaaSSecurityGate(true);
+                    soundService.playSound("RADAR_SECURITY");
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-900/30 border border-emerald-500/40 transition cursor-pointer hover:scale-105"
+                  title="تفعيل التجربة المجانية المخصصة بعد تخطي جدار الأمان"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  <span>➕ تجربة مجانية</span>
+                  <Sparkles className="w-4 h-4 text-emerald-300" />
+                  <span>➕ تجربة مجانية (مشفر)</span>
                 </button>
               </div>
             </div>
@@ -2517,6 +2523,16 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
       <TenantSecurityGateModal
         isOpen={showTenantSelectorModal}
         onClose={() => setShowTenantSelectorModal(false)}
+      />
+
+      {/* ENCRYPTED SAAS TRIAL REGISTRATION SECURITY GATEWAY MODAL */}
+      <SaaSRegistrationSecurityGateModal
+        isOpen={showSaaSSecurityGate}
+        onClose={() => setShowSaaSSecurityGate(false)}
+        onSuccess={() => {
+          setShowSaaSSecurityGate(false);
+          setShowSaaSOnboarding(true);
+        }}
       />
 
       {/* MODALS */}

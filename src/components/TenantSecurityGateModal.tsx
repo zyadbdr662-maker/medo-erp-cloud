@@ -119,12 +119,16 @@ export const TenantSecurityGateModal: React.FC<TenantSecurityGateModalProps> = (
 
         // Log security audit
         try {
-          SecurityAuditService.getInstance().logAction(
-            "TENANT_SECURITY_GATE_UNLOCKED",
-            "SECURITY_GATEWAY",
-            `تم فك قفل بوابة المنشآت والعملاء بنجاح بالمفتاح المعتمد: [${key}]`,
-            "SUCCESS"
-          );
+          SecurityAuditService.getInstance().recordAuditLog({
+            action: "SECURITY_ALERT",
+            userId: "SYSTEM",
+            username: "بوابة سحابة الأعمال",
+            email: "security-gate@medoerp.com",
+            deviceInfo: "بوابة التحقق الأمنية",
+            riskLevel: "LOW",
+            details: `تم فك قفل بوابة المنشآت والعملاء بنجاح بالمفتاح المعتمد: [${key}]`,
+            status: "SUCCESS"
+          });
         } catch (e) {}
       } else {
         const nextFailed = failedAttempts + 1;

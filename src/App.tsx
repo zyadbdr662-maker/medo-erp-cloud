@@ -479,11 +479,9 @@ export default function App() {
     const tenant = mgrSession?.tenantSlug || TenantIsolationService.resolveActiveTenant() || "binziyad";
     const token = mgrSession?.token || "AUTH_MGR_AUTO";
     const newUrl = `${window.location.pathname}?tenant=${tenant}&role=MANAGER&token=${token}&path=/employee/manager`;
-    window.history.pushState({}, "", newUrl);
-
-    setRefreshSuccessMessage("👑 تم العودة بنجاح إلى وضع المدير العام واستعادة كامل الصلاحيات الإدارية والمالية!");
+    
     soundService.playSound("ROYAL_BANK_CHIME");
-    setTimeout(() => setRefreshSuccessMessage(null), 5000);
+    window.location.href = newUrl;
   }, []);
 
   // Handler to Switch to Test Role safely
@@ -554,11 +552,9 @@ export default function App() {
 
     const tenant = TenantIsolationService.resolveActiveTenant() || "binziyad";
     const newUrl = `${window.location.pathname}?tenant=${tenant}&role=${targetRole}&token=AUTH_${targetRole}_AUTO&path=/employee/${targetRole.toLowerCase()}`;
-    window.history.pushState({}, "", newUrl);
-
-    setRefreshSuccessMessage(`🔄 تم التبديل التجريبي إلى دور (${roleTitleAr}). يمكنك العودة لوضع المدير العام في أي وقت!`);
+    
     soundService.playSound("SUCCESS_CHIME");
-    setTimeout(() => setRefreshSuccessMessage(null), 5000);
+    window.location.href = newUrl;
   }, [erpState?.currentUser, handleSwitchBackToManager]);
 
   // ⚡ Priority #1: Central Auth & Token Access Verification Hook (Executes before module load)
@@ -2514,7 +2510,7 @@ export default function App() {
               );
             })()}
 
-            <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+            <main key={`${erpState?.currentUser?.role || ""}-${activeTab}`} className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
               {erpState.currentUser?.plan === "TRIAL" && (trialService.getTrialState()?.isExpired ?? false) && ["DASHBOARD", "INTEGRATED_ERP", "SAAS_PLATFORM", "SCHEDULED_BACKUP", "CLOUD_SYNC", "TRUST_CENTER", "SETTINGS", "THEME_STUDIO"].includes(activeTab) ? (
                 <div className="flex flex-col items-center justify-center h-[60vh] space-y-6 text-center animate-fade-in">
                   <div className="w-24 h-24 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
