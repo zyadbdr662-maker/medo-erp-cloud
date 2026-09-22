@@ -72,6 +72,7 @@ import {
 } from "lucide-react";
 import { ERPUser } from "../types/erp";
 import { BzmtLogo } from "./BzmtLogo";
+import { ShowcaseGallery } from "./ShowcaseGallery";
 
 export interface SapClientOption {
   id: string;
@@ -439,6 +440,8 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
   }, [showEmailVerificationModal, verificationCountdown, isVerificationLockedOut]);
 
   // Modals
+  const [showShowcaseModal, setShowShowcaseModal] = useState(false);
+  const [showcaseInitialItem, setShowcaseInitialItem] = useState<number | undefined>(undefined);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [selectedLegalPolicy, setSelectedLegalPolicy] = useState<LegalPolicyType>("TERMS");
   const [complianceReportOpen, setComplianceReportOpen] = useState(false);
@@ -1920,6 +1923,162 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
             )}
           </div>
         </div>
+
+        {/* ============================================================== */}
+        {/* 🖼️ SYSTEM SHOWCASE GALLERY SECTION (معرض النظام - شاهد قوته قبل التجربة) */}
+        {/* ============================================================== */}
+        <div className="mt-12 sm:mt-16 w-full bg-gradient-to-b from-[#06182c]/90 via-[#071d36]/90 to-[#040e1b]/95 border-2 border-amber-400/40 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-8 relative overflow-hidden">
+          
+          {/* BACKGROUND GLOW */}
+          <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* SECTION HEADER */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10 border-b border-slate-700/80 pb-6 text-center md:text-right">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 font-bold text-xs border border-amber-400/40 mb-2">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>شاهد النظام بأعينك قبل التسجيل (90 شاشة معتمدة ومطابقة لـ IFRS)</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center justify-center md:justify-start gap-2">
+                <span>🖼️ معرض النظام - شاهد قوته قبل التجربة</span>
+              </h2>
+              <p className="text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                استعرض شاشات حية ومباشرة من داخل بيئة MeDo Cloud ERP لكل حركة محاسبية، قيود اليومية، الفواتير الذكية، كشوفات الحسابات، وتقارير الذكاء الاصطناعي.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowcaseInitialItem(undefined);
+                setShowShowcaseModal(true);
+              }}
+              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-[#07182c] font-black text-sm shadow-xl shadow-amber-500/25 transition-all flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:scale-95 shrink-0"
+            >
+              <Eye className="w-4 h-4 text-[#07182c]" />
+              <span>استعراض جميع الشاشات (90 صورة حية)</span>
+              <ArrowRight className="w-4 h-4 text-[#07182c]" />
+            </button>
+          </div>
+
+          {/* 6 FEATURED SCREENSHOT THUMBNAIL CARDS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 relative z-10">
+            {[
+              {
+                id: 1,
+                title: "فاتورة مبيعات ذكية + ZATCA Phase 2",
+                category: "المبيعات ونقاط البيع",
+                badge: "QR متوافق 100%",
+                desc: "إصدار فواتير ضريبية فورية، تدقيق ائتمان العميل، واحتساب الضرائب والخصومات آلياً.",
+                icon: "🧾",
+              },
+              {
+                id: 11,
+                title: "أمر شراء وتوريد بضاعة للمخازن",
+                category: "المشتريات والموردين",
+                badge: "إسناد دفعات آلي",
+                desc: "دورة المشتريات المتكاملة من طلب الشراء إلى فحص الاستلام ومطابقة فاتورة المورد.",
+                icon: "📦",
+              },
+              {
+                id: 21,
+                title: "سند صرف وقبض متعدد العملات",
+                category: "الخزينة والبنوك",
+                badge: "فوارق عملة فورية",
+                desc: "إدارة الخزائن النقدية، المحافظ الإلكترونية، وبنك اليمن المتحد بحساب فوارق الصرف.",
+                icon: "💰",
+              },
+              {
+                id: 31,
+                title: "قيد محاسبي آلي بالذكاء الاصطناعي",
+                category: "الحسابات والقيود (GL)",
+                badge: "Gemini AI Engine",
+                desc: "تحويل الأوامر الصوتية والنصوص إلى قيود يومية مزدوجة متوازنة ومرحلة مباشرة للشجرة.",
+                icon: "🤖",
+              },
+              {
+                id: 41,
+                title: "ميزان المراجعة وقائمة الأرباح والخسائر",
+                category: "التقارير المالية وIFRS",
+                badge: "معايير دولية IFRS",
+                desc: "ميزانية عمومية، تدفقات نقدية، وقوائم مالية ختامية بضغطة زر مع مقارنات تاريخية.",
+                icon: "📊",
+              },
+              {
+                id: 71,
+                title: "شاشة نقاط البيع السريعة (POS)",
+                category: "نقاط البيع والمطاعم",
+                badge: "أوفلاين + طابعة حرارية",
+                desc: "واجهة لمسية فائقة السرعة للمتاجر ونقاط البيع مع دعم الباركود والعمل دون إنترنت.",
+                icon: "⚡",
+              }
+            ].map((card) => (
+              <div
+                key={card.id}
+                onClick={() => {
+                  setShowcaseInitialItem(card.id);
+                  setShowShowcaseModal(true);
+                }}
+                className="group bg-[#081f38]/90 hover:bg-[#0b294a] border border-slate-700/80 hover:border-amber-400/80 rounded-2xl p-4 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-amber-500/10 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                    <span className="text-xl">{card.icon}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold text-[10px] border border-amber-400/30">
+                      {card.badge}
+                    </span>
+                  </div>
+
+                  {/* THUMBNAIL SNAPSHOT PREVIEW BOX */}
+                  <div className="h-24 w-full bg-[#030a14] rounded-xl p-2.5 border border-slate-800 mb-3 flex flex-col justify-between font-mono text-[9px] text-slate-400 group-hover:border-amber-400/50 transition">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-1">
+                      <span className="text-white font-bold truncate">{card.title}</span>
+                      <span className="text-emerald-400">#MD-LIVE</span>
+                    </div>
+                    <div className="flex justify-between text-slate-300">
+                      <span>الترحيل: مرحل ومعتمد</span>
+                      <span className="text-amber-300 font-bold">150,000 YER</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500 text-[8px]">
+                      <span>التشفير: AES-256 GCM</span>
+                      <span className="text-blue-300">انقر للتكبير 🔍</span>
+                    </div>
+                  </div>
+
+                  <h4 className="font-bold text-white text-sm group-hover:text-amber-300 transition line-clamp-1 mb-1">
+                    {card.title}
+                  </h4>
+                  <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
+                    {card.desc}
+                  </p>
+                </div>
+
+                <div className="pt-3 mt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                  <span className="text-[11px] text-blue-300 font-bold">{card.category}</span>
+                  <span className="text-amber-400 font-bold flex items-center gap-1 group-hover:translate-x-[-3px] transition text-[11px]">
+                    <span>عرض الشاشة</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* BOTTOM QUICK STATS BAR */}
+          <div className="pt-4 border-t border-slate-700/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-300 relative z-10">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>جميع الشاشات مأخوذة من البيئة السحابية الحقيقية لمنظومة MeDo Cloud ERP</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-amber-300 font-bold">14 قسماً تخصصياً</span>
+              <span>•</span>
+              <span className="text-blue-300 font-bold">100% باللغة العربية والإنجليزية</span>
+            </div>
+          </div>
+
+        </div>
       </main>
 
       {/* SAP ENTERPRISE COMPLIANCE & LEGAL FOOTER */}
@@ -2475,6 +2634,13 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
       <SapComplianceReportModal
         isOpen={complianceReportOpen}
         onClose={() => setComplianceReportOpen(false)}
+      />
+
+      <ShowcaseGallery
+        isModal={true}
+        isOpen={showShowcaseModal}
+        initialItemId={showcaseInitialItem}
+        onClose={() => setShowShowcaseModal(false)}
       />
     </div>
   );

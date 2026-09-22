@@ -51,6 +51,7 @@ import { soundService } from "../services/notificationSoundService";
 import { BzmtLogo } from "./BzmtLogo";
 import { SystemFooter } from "./SystemFooter";
 import { TenantIsolationService } from "../services/tenantIsolationService";
+import { ShowcaseGallery } from "./ShowcaseGallery";
 
 const ModuleModal = ({ module, onClose }: { module: any; onClose: () => void }) => (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -79,7 +80,7 @@ interface CorporateWebsiteProps {
 }
 
 export const CorporateWebsite: React.FC<CorporateWebsiteProps> = ({ availableBranches, onLoginSuccess }) => {
-  const [activeTab, setActiveTab] = useState<"HOME" | "ABOUT" | "MODULES" | "BLOG" | "PRICING" | "CONTACT" | "TRUST_CENTER" | "FAQ">("HOME");
+  const [activeTab, setActiveTab] = useState<"HOME" | "ABOUT" | "MODULES" | "BLOG" | "SHOWCASE" | "PRICING" | "CONTACT" | "TRUST_CENTER" | "FAQ">("HOME");
   const [showLogin, setShowLogin] = useState(() => Boolean(TenantIsolationService.resolveActiveTenant()));
   const [showInstantDeploy, setShowInstantDeploy] = useState(false);
   const [defaultShowSaaSOnboarding, setDefaultShowSaaSOnboarding] = useState(false);
@@ -251,6 +252,15 @@ export const CorporateWebsite: React.FC<CorporateWebsiteProps> = ({ availableBra
         <BookOpen className="w-4 h-4" />
         <span>المدونة</span>
         <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-500/20 text-sap-secondary font-bold">جديد</span>
+      </button>
+      <button 
+        id="nav-showcase-btn"
+        onClick={() => { setActiveTab("SHOWCASE"); setMobileMenuOpen(false); }} 
+        className={`font-bold text-xs sm:text-sm lg:text-base transition-colors py-1 flex items-center gap-1.5 ${activeTab === "SHOWCASE" ? "text-sap-secondary border-b-2 border-sap-secondary" : "text-slate-300 hover:text-white"}`}
+      >
+        <Sparkles className="w-4 h-4 text-amber-400" />
+        <span>معرض النظام</span>
+        <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-emerald-500/20 text-emerald-300 font-bold">90 شاشة</span>
       </button>
       <button 
         id="nav-pricing-btn"
@@ -919,8 +929,43 @@ export const CorporateWebsite: React.FC<CorporateWebsiteProps> = ({ availableBra
                     ))}
                   </div>
                 </div>
+
+                {/* SHOWCASE PROMOTIONAL BANNER IN BLOG */}
+                <div className="bg-gradient-to-r from-[#091f36] via-[#0d2a4a] to-[#081b30] border-2 border-amber-400/50 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+                  <div className="space-y-2 text-right">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 font-bold text-xs border border-amber-400/40">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>كتالوج بصري وتفاعلي شامل (90 صورة حية)</span>
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-black text-white">
+                      🖼️ معرض نظام MeDo ERP - شاهد قوة النظام قبل التجربة
+                    </h3>
+                    <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
+                      استكشف جميع الحركات المحاسبية، فواتير المبيعات والمشتريات، كشوفات الحساب، سندات الصرف والقبض، وواجهات الذكاء الاصطناعي بدقة متناهية.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setActiveTab("SHOWCASE");
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/20 transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+                  >
+                    <span>فتح المعرض التفاعلي الكامل</span>
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                </div>
               </>
             )}
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* 4.5. SHOWCASE TAB (معرض الشاشات الحية - 90 شاشة)               */}
+        {/* ============================================================== */}
+        {activeTab === "SHOWCASE" && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 animate-fadeIn">
+            <ShowcaseGallery isModal={false} />
           </div>
         )}
 
