@@ -45,7 +45,13 @@ import { SystemAuditReportView } from "./SystemAuditReportView";
 import { SapUniversalSearchModal } from "./SapUniversalSearchModal";
 import { SystemDeployCard } from "./SystemDeployCard";
 import { SovereignRejuvenationModal } from "./SovereignRejuvenationModal";
-import { Search, Zap } from "lucide-react";
+import { StrictSessionIsolationView } from "./StrictSessionIsolationView";
+import { RegistrationRequestsView } from "./RegistrationRequestsView";
+import { ActiveSessionsView } from "./ActiveSessionsView";
+import { TasksManagementView } from "./TasksManagementView";
+import { TimelinesScheduleView } from "./TimelinesScheduleView";
+import { MasterSupportCommunicationView } from "./MasterSupportCommunicationView";
+import { Search, Zap, Activity, CheckSquare, Calendar, MessageCircle } from "lucide-react";
 import { ERPState, SystemSettings } from "../types/erp";
 import { soundService, SoundType, WhatsAppNotificationPayload } from "../services/notificationSoundService";
 
@@ -67,7 +73,13 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
   const [activeTab, setActiveTab] = useState<
     | "SETTINGS"
     | "DEPLOY_CHECK"
+    | "TASKS_MANAGEMENT"
+    | "TIMELINES_SCHEDULE"
+    | "SUPPORT_COMMUNICATION"
     | "UNIVERSAL_SEARCH"
+    | "STRICT_ISOLATION"
+    | "PENDING_REQUESTS"
+    | "ACTIVE_SESSIONS"
     | "SAAS_LICENSES"
     | "CENTRAL_ARCHIVE"
     | "CLOUD_SECURITY"
@@ -356,6 +368,45 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
           <span>🔄 التحقق من التحديث والنشر الرسمي (Auto-Deploy)</span>
         </button>
 
+        {/* إدارة المهام والأولويات */}
+        <button
+          onClick={() => setActiveTab("TASKS_MANAGEMENT")}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            activeTab === "TASKS_MANAGEMENT"
+              ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-950/60 border border-indigo-300 font-bold"
+              : "text-indigo-300 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-500/40"
+          }`}
+        >
+          <CheckSquare className="w-4 h-4 text-indigo-300" />
+          <span>📋 إدارة المهام والأولويات (Task Hub)</span>
+        </button>
+
+        {/* الجداول الزمنية ومواعيد التسليم */}
+        <button
+          onClick={() => setActiveTab("TIMELINES_SCHEDULE")}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            activeTab === "TIMELINES_SCHEDULE"
+              ? "bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-950/60 border border-teal-300 font-bold"
+              : "text-teal-300 bg-teal-950/40 hover:bg-teal-900/60 border border-teal-500/40"
+          }`}
+        >
+          <Calendar className="w-4 h-4 text-teal-300" />
+          <span>📅 الجداول الزمنية ومواعيد التسليم (Timelines)</span>
+        </button>
+
+        {/* التواصل والدعم المباشر */}
+        <button
+          onClick={() => setActiveTab("SUPPORT_COMMUNICATION")}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            activeTab === "SUPPORT_COMMUNICATION"
+              ? "bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow-lg shadow-sky-950/60 border border-sky-300 font-bold"
+              : "text-sky-300 bg-sky-950/40 hover:bg-sky-900/60 border border-sky-500/40"
+          }`}
+        >
+          <MessageCircle className="w-4 h-4 text-sky-300" />
+          <span>💬 التواصل والدعم المباشر (Direct Chat)</span>
+        </button>
+
         {/* 1. لوحة التحكم السيادية */}
         <button
           onClick={() => setActiveTab("SETTINGS")}
@@ -380,6 +431,45 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
         >
           <Search className="w-4 h-4 text-amber-300" />
           <span>🔍 محرك البحث الشامل عن المنشآت والأسماء (200+ منشأة)</span>
+        </button>
+
+        {/* عزل الجلسات الصارم */}
+        <button
+          onClick={() => setActiveTab("STRICT_ISOLATION")}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            activeTab === "STRICT_ISOLATION"
+              ? "bg-gradient-to-r from-amber-600 to-yellow-600 text-slate-950 shadow-lg shadow-amber-950/60 border border-amber-300 font-bold"
+              : "text-amber-300 bg-amber-950/30 hover:bg-amber-900/50 border border-amber-500/30"
+          }`}
+        >
+          <Lock className="w-4 h-4 text-amber-300" />
+          <span>🔒 عزل الجلسات الصارم وحماية المنشآت</span>
+        </button>
+
+        {/* طلبات التسجيل المعلقة والموافقات */}
+        <button
+          onClick={() => setActiveTab("PENDING_REQUESTS")}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            activeTab === "PENDING_REQUESTS"
+              ? "bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-950/60 border border-indigo-300 font-bold"
+              : "text-indigo-300 bg-indigo-950/30 hover:bg-indigo-900/50 border border-indigo-500/30"
+          }`}
+        >
+          <Clock className="w-4 h-4 text-indigo-300" />
+          <span>⏳ طلبات التسجيل والموافقات الإدارية</span>
+        </button>
+
+        {/* الجلسات النشطة */}
+        <button
+          onClick={() => setActiveTab("ACTIVE_SESSIONS")}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            activeTab === "ACTIVE_SESSIONS"
+              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-950/60 border border-emerald-300 font-bold"
+              : "text-emerald-300 bg-emerald-950/30 hover:bg-emerald-900/50 border border-emerald-500/30"
+          }`}
+        >
+          <Activity className="w-4 h-4 text-emerald-300" />
+          <span>📊 الجلسات النشطة الآن (Live)</span>
         </button>
 
         {/* 2. المنصة السحابية المشفرة ومنظومة عملاء النظام 9 */}
@@ -787,6 +877,21 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
         </div>
       )}
 
+      {/* TAB: TASKS_MANAGEMENT (إدارة المهام والأولويات) */}
+      {activeTab === "TASKS_MANAGEMENT" && (
+        <TasksManagementView />
+      )}
+
+      {/* TAB: TIMELINES_SCHEDULE (الجداول الزمنية ومواعيد التسليم) */}
+      {activeTab === "TIMELINES_SCHEDULE" && (
+        <TimelinesScheduleView />
+      )}
+
+      {/* TAB: SUPPORT_COMMUNICATION (التواصل والدعم المباشر مع العملاء) */}
+      {activeTab === "SUPPORT_COMMUNICATION" && (
+        <MasterSupportCommunicationView />
+      )}
+
       {/* TAB 1: SYSTEM SETTINGS */}
       {activeTab === "SETTINGS" && (
         <SystemSettingsView
@@ -806,6 +911,27 @@ export const ExecutiveMasterSystemSuite: React.FC<ExecutiveMasterSystemSuiteProp
       {activeTab === "UNIVERSAL_SEARCH" && (
         <div className="space-y-4 animate-fadeIn">
           <SapUniversalSearchModal isEmbedded={true} />
+        </div>
+      )}
+
+      {/* TAB: STRICT SESSION ISOLATION (عزل الجلسات الصارم) */}
+      {activeTab === "STRICT_ISOLATION" && (
+        <div className="space-y-4 animate-fadeIn">
+          <StrictSessionIsolationView />
+        </div>
+      )}
+
+      {/* TAB: PENDING REGISTRATION REQUESTS (طلبات التسجيل المعلقة والموافقات) */}
+      {activeTab === "PENDING_REQUESTS" && (
+        <div className="space-y-4 animate-fadeIn">
+          <RegistrationRequestsView />
+        </div>
+      )}
+
+      {/* TAB: ACTIVE SESSIONS MONITOR (الجلسات النشطة الآن) */}
+      {activeTab === "ACTIVE_SESSIONS" && (
+        <div className="space-y-4 animate-fadeIn">
+          <ActiveSessionsView />
         </div>
       )}
 

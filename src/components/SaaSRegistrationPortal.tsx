@@ -48,6 +48,7 @@ import {
   MASTER_ADMIN_WHATSAPP,
 } from "../services/notificationService";
 import { emailService } from "../services/emailService";
+import { RegistrationRequestsService } from "../services/registrationRequestsService";
 
 interface SaaSRegistrationPortalProps {
   onCancel: () => void;
@@ -366,6 +367,24 @@ export const SaaSRegistrationPortal: React.FC<SaaSRegistrationPortalProps> = ({
         } catch (e) {
           console.warn("Error setting new tenant session:", e);
         }
+
+        RegistrationRequestsService.addRequest({
+          companyNameAr: formData.nameAr,
+          companyNameEn: formData.nameEn || formData.nameAr,
+          crNumber: formData.crNumber || "CR-2026-PENDING",
+          taxNumber: formData.taxNumber || "TAX-2026-PENDING",
+          phone: formData.phone,
+          email: formData.email,
+          address: `${formData.city} - ${formData.address}`,
+          activity: formData.industry,
+          contactName: formData.nameAr,
+          contactEmail: formData.email,
+          contactPhone: formData.phone,
+          source: "self_registration",
+          ipAddress: "192.168.1.104",
+          device: `${navigator.platform} - Web`,
+          location: formData.city,
+        });
 
         setProvisionedTenant(newTenant);
 
@@ -916,6 +935,30 @@ export const SaaSRegistrationPortal: React.FC<SaaSRegistrationPortalProps> = ({
               <p className="text-xs text-slate-400 max-w-lg mx-auto">
                 تم تخصيص بيئة سحابية معزولة لـ <strong className="text-white">{provisionedTenant.name}</strong> وتم إشعار الإدارة السيادية والمدير بدر فوراً.
               </p>
+            </div>
+
+            {/* Official Pending Approval Receipt Card */}
+            <div className="bg-slate-950 border border-indigo-500/40 rounded-3xl p-5 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-sm font-black text-white">✅ تم استلام طلبك بنجاح - بانتظار الاعتماد السيادي</span>
+                </div>
+                <span className="text-xs font-mono text-indigo-400 font-bold">REQ-2026-PENDING</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-300">
+                <div><span className="text-slate-500">المنشأة:</span> <strong className="text-white">{provisionedTenant.name}</strong></div>
+                <div><span className="text-slate-500">الرقم الضريبي:</span> <span className="font-mono text-emerald-400">{formData.taxNumber || "مُدرج"}</span></div>
+                <div><span className="text-slate-500">حالة الطلب:</span> <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 font-bold border border-amber-600/40">⏳ طلبك الآن تحت المعالجة</span></div>
+                <div><span className="text-slate-500">أوقات الدوام الرسمي:</span> الأحد - الخميس (8 صباحاً - 5 مساءً)</div>
+              </div>
+
+              <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-1 text-xs text-slate-400">
+                <div className="font-bold text-slate-200">📞 للاستفسار ومتابعة حالة الاعتماد:</div>
+                <div>الهاتف / واتساب: <span className="font-mono text-emerald-400 font-bold" dir="ltr">+967 773 586 047</span></div>
+                <div>البريد الإلكتروني المعتمد: <span className="font-mono text-indigo-300">bdr.zyad@yandex.com</span></div>
+              </div>
             </div>
 
             {/* Instant Notification Confirmation Banner */}

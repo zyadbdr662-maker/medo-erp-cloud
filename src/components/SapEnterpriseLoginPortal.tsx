@@ -18,7 +18,7 @@ import { SapComplianceReportModal } from "./SapComplianceReportModal";
 import { initializeEmptyTenantState } from "../services/erpStorage";
 import { SaaSRegistrationPortal } from "./SaaSRegistrationPortal";
 import { SapUniversalSearchModal } from "./SapUniversalSearchModal";
-import { PreGeneratedTenant, findTenantById } from "../data/preGeneratedTenants";
+import { PreGeneratedTenant, findTenantById, preGeneratedTenants } from "../data/preGeneratedTenants";
 import { soundService } from "../services/notificationSoundService";
 import { trialService } from "../services/trialService";
 import { trialOperationsService } from "../services/trialOperationsService";
@@ -37,6 +37,8 @@ import {
   ExternalLink,
   Zap,
   Globe2,
+  Globe,
+  X,
   FileText,
   BadgeCheck,
   Clock,
@@ -281,6 +283,10 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
     activeTenantSlug &&
     !["default", "master-badr", "bdr-zyad"].includes(activeTenantSlug)
   );
+
+  // Tenant switcher modal state
+  const [showTenantSelectorModal, setShowTenantSelectorModal] = useState(false);
+  const [tenantSearchTerm, setTenantSearchTerm] = useState("");
 
   const customTenantClientOption: SapClientOption | null = isCustomTenant
     ? {
@@ -967,7 +973,8 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
 
       {/* MAIN CONTAINER */}
       <main id="sap-portal-main" className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-center z-10">
-        {isCustomTenant && (
+        {/* CASE 1: TENANT PORTAL (When opened with ?tenant=...) */}
+        {isCustomTenant ? (
           <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#06182a]/95 to-[#0a2540]/95 border border-emerald-500/60 shadow-[0_10px_30px_rgba(16,185,129,0.15)] backdrop-blur-xl flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -980,7 +987,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                       {currentTenantObj?.companyNameAr || activeTenantDetails.nameAr}
                     </span>
                     <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 font-bold">
-                      نطاق مخصص ومعزول
+                      بوابة منشأة معزولة ومستقلة
                     </span>
                     {currentTenantObj?.status === "PAID_ENTERPRISE" && (
                       <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 font-bold">
@@ -996,7 +1003,22 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 self-start sm:self-center">
+              <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.clear();
+                      sessionStorage.clear();
+                    } catch (e) {}
+                    window.location.href = window.location.pathname;
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md transition cursor-pointer hover:scale-105"
+                  title="الخروج من بوابة العميل والعودة إلى المنصة الرئيسية للمدير"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>🔐 دخول المدير (المنصة الرئيسية)</span>
+                </button>
                 <span className="text-[11px] text-emerald-300 font-mono bg-[#030d17] px-3 py-1.5 rounded-xl border border-emerald-800/80 shadow-sm">
                   Tenant: {activeTenantSlug}
                 </span>
@@ -1043,6 +1065,77 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                 </div>
               </div>
             )}
+          </div>
+        ) : (
+          /* CASE 2: MASTER PLATFORM (When opened without tenant) */
+          <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#06182a]/95 via-[#0b2038]/95 to-[#05111e]/95 border border-[#d4af37]/60 shadow-[0_10px_30px_rgba(212,175,55,0.15)] backdrop-blur-xl flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#d4af37]/20 border border-[#d4af37]/50 flex items-center justify-center text-[#d4af37] font-black text-2xl shadow-inner shrink-0">
+                  👑
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-base sm:text-lg font-black text-white">
+                      المنصة الرئيسية للمدير (Master Platform)
+                    </span>
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/40 font-bold">
+                      بوابة الإدارة السيادية والتحكم المركزي
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 font-normal mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span>👤 مدير المنظومة: <strong className="text-amber-300 font-bold">بدر عايض محمد</strong></span>
+                    <span>✉️ البريد السيادي: <strong className="text-white font-mono">admin@medo-erp.cloud</strong></span>
+                    <span>🛡️ صلاحيات كاملة لإدارة السحابة وتطوير المنشآت</span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => setShowTenantSelectorModal(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md transition cursor-pointer hover:scale-105"
+                  title="استعراض والذهاب إلى بوابة أي منشأة أو عميل"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span>🌐 الذهاب إلى بوابة عميل</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick 1-Click Director Fast Login */}
+            <div className="border-t border-slate-700/60 pt-3">
+              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
+                  <span>الدخول السريع بحساب المدير العام السيادي:</span>
+                </span>
+                <span className="text-[11px] text-slate-400">admin@medo-erp.cloud</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("admin@medo-erp.cloud");
+                  setPassword("admin");
+                  setMessage("تم تجهيز بيانات المدير العام (بدر عايض محمد). اضغط 'تسجيل الدخول' للدخول فوراً.");
+                  soundService.playSound("SUCCESS_CHIME");
+                }}
+                className="w-full p-3 rounded-xl bg-[#0a2540]/90 hover:bg-[#10355a] border border-[#d4af37]/50 text-right text-xs transition cursor-pointer flex items-center justify-between shadow-sm hover:border-[#d4af37]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] font-bold">
+                    BM
+                  </div>
+                  <div>
+                    <div className="font-bold text-white text-sm">أ. بدر عايض محمد (المدير العام والمالك السيادي)</div>
+                    <div className="text-[11px] text-slate-400 font-mono">admin@medo-erp.cloud (صلاحيات سيادية كاملة)</div>
+                  </div>
+                </div>
+                <span className="text-xs px-3 py-1.5 rounded-lg bg-[#d4af37] text-[#0a2540] font-black shadow-sm">
+                  ⚡ دخول فوري للمدير
+                </span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -1190,18 +1283,20 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
             {/* CARD TOP BRANDING */}
             <div className="flex items-center justify-between gap-3 border-b border-slate-700/60 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37]/20 to-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center shadow-inner shrink-0">
-                  <Building2 className="w-5 h-5 text-[#d4af37]" />
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37]/20 to-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center shadow-inner shrink-0 text-[#d4af37] font-black text-lg">
+                  {isCustomTenant ? "🏢" : "👑"}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[20px] font-black text-white tracking-tight">MeDo ERP</span>
+                    <span className="text-[20px] font-black text-white tracking-tight">
+                      {isCustomTenant ? (currentTenantObj?.companyNameAr || activeTenantDetails.nameAr) : "المنصة الرئيسية للمدير"}
+                    </span>
                     <span className="text-[11px] bg-slate-800 text-amber-300 font-bold px-2.5 py-0.5 rounded-full border border-slate-700">
-                      {isCustomTenant ? (currentTenantObj?.companyNameAr || currentClient.nameAr) : currentClient.badge}
+                      {isCustomTenant ? "بوابة منشأة معزولة" : "Master Platform"}
                     </span>
                   </div>
                   <p className="text-[13px] text-slate-300 font-medium">
-                    {isCustomTenant ? "بوابة الدخول السحابية المخصصة للمنشأة" : "بوابة الدخول المؤسسي المعتمدة"}
+                    {isCustomTenant ? "بيئة العمل والتشغيل السحابية المستقلة للمنشأة" : "بوابة الإدارة السيادية والتحكم المركزي — MeDo ERP"}
                   </p>
                 </div>
               </div>
@@ -2100,6 +2195,113 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TENANT SELECTOR MODAL (استعراض والذهاب لبوابة عميل) */}
+      {showTenantSelectorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-2xl bg-[#06182a] border border-[#d4af37]/60 rounded-3xl p-6 shadow-2xl flex flex-col max-h-[85vh] text-white">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-700/60">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37]">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white">🌐 اختيار بوابة عميل / منشأة معزولة</h3>
+                  <p className="text-xs text-slate-300">اختر منشأة للدخول المباشر إلى بيئة العمل السحابية المعزولة</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTenantSelectorModal(false)}
+                className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="py-4">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
+                <input
+                  type="text"
+                  value={tenantSearchTerm}
+                  onChange={(e) => setTenantSearchTerm(e.target.value)}
+                  placeholder="ابحث باسم الشركة أو المدينة أو المعرف (مثال: الزرقاء، بن زياد، كراع، صنعاء)..."
+                  className="w-full bg-[#030d17] border border-slate-700 rounded-xl pr-10 pl-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
+                />
+              </div>
+            </div>
+
+            {/* Tenants List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar max-h-[45vh]">
+              {preGeneratedTenants
+                .filter((t) => {
+                  if (!tenantSearchTerm) return true;
+                  const term = tenantSearchTerm.toLowerCase();
+                  return (
+                    t.name.toLowerCase().includes(term) ||
+                    t.companyNameAr?.toLowerCase().includes(term) ||
+                    t.city.toLowerCase().includes(term) ||
+                    t.id.toLowerCase().includes(term) ||
+                    t.slug.toLowerCase().includes(term)
+                  );
+                })
+                .slice(0, 30)
+                .map((tenant) => (
+                  <div
+                    key={tenant.id}
+                    className="p-3.5 rounded-2xl bg-[#0a2540]/60 hover:bg-[#0e3153] border border-slate-700/60 hover:border-[#d4af37]/60 transition flex items-center justify-between gap-3 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-white text-sm flex items-center gap-2">
+                          <span>{tenant.name || tenant.companyNameAr}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
+                            {tenant.id}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-400 flex items-center gap-3 mt-0.5">
+                          <span>📍 {tenant.city}</span>
+                          <span>🏢 {tenant.industry}</span>
+                          {tenant.assignedAdminName && <span>👤 {tenant.assignedAdminName}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          localStorage.clear();
+                          sessionStorage.clear();
+                        } catch (e) {}
+                        window.location.href = `?tenant=${tenant.id}`;
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-[#d4af37] text-[#0a2540] font-black text-xs hover:bg-amber-400 transition cursor-pointer shadow-md shrink-0 group-hover:scale-105"
+                    >
+                      🚀 دخول البوابة
+                    </button>
+                  </div>
+                ))}
+            </div>
+
+            <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-400">
+              <span>إجمالي المنشآت الجاهزة والمعزولة: 200 شركة</span>
+              <button
+                type="button"
+                onClick={() => setShowTenantSelectorModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-slate-700 transition cursor-pointer"
+              >
+                إغلاق
+              </button>
+            </div>
           </div>
         </div>
       )}

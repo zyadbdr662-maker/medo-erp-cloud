@@ -62,7 +62,7 @@ export const SystemUpdateModal: React.FC<SystemUpdateModalProps> = ({
     setTimeout(() => {
       setProgress(100);
       setUpdateStatus("AVAILABLE");
-      setActiveStep("تم العثور على تحديث تراكمي رئيسي: الإصدار v2026.9.2 جاهز للتطبيق الفوري.");
+      setActiveStep("تم العثور على تحديث تراكمي رئيسي: الإصدار v4.5.2026 (BUILD-6103-REL) جاهز للتطبيق الفوري.");
     }, 2400);
   };
 
@@ -81,12 +81,12 @@ export const SystemUpdateModal: React.FC<SystemUpdateModalProps> = ({
 
     setTimeout(() => {
       setProgress(35);
-      setActiveStep("تحديث محرك المزامنة الهجينة وترقية جداول IndexedDB / SQLite...");
+      setActiveStep("تحديث محرك المزامنة الهجينة وفصل المنصة السيادية الرئيسية عن المنشآت...");
     }, 1000);
 
     setTimeout(() => {
       setProgress(65);
-      setActiveStep("تثبيت حزم الهوية البصرية SAP Green & Gold وتحديث شهادات التراخيص الرقمية...");
+      setActiveStep("تثبيت حزم إدارة المهام، الجداول الزمنية، والدعم المباشر مع ترقية محرك 60 FPS...");
     }, 2000);
 
     setTimeout(() => {
@@ -97,7 +97,7 @@ export const SystemUpdateModal: React.FC<SystemUpdateModalProps> = ({
     setTimeout(() => {
       setProgress(100);
       setUpdateStatus("SUCCESS");
-      setActiveStep("تم تحديث وترقية نظام MeDo ERP بنجاح إلى أحدث إصدار v2026.9.2!");
+      setActiveStep("تم تحديث وترقية نظام MeDo ERP بنجاح إلى أحدث إصدار معتمد v4.5.2026!");
       
       // Update system settings in erpState
       if (erpState?.systemSettings) {
@@ -247,39 +247,41 @@ export const SystemUpdateModal: React.FC<SystemUpdateModalProps> = ({
           </div>
 
           <div className="space-y-3 text-xs">
-            {/* Version 2026.9.2 */}
+            {/* Version 4.5.2026 */}
             <div className="p-4 bg-slate-950 rounded-2xl border border-sap-primary/40 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 rounded bg-sap-primary text-sap-secondary font-mono font-bold text-[10px]">
-                    v2026.9.2 (أحدث إصدار)
+                    v4.5.2026 (أحدث إصدار سيادي)
                   </span>
-                  <span className="font-bold text-white">ترقية نظام التراخيص وهيكلية SAP Cloud Trial</span>
+                  <span className="font-bold text-white">فصل المنصة الرئيسية السيادية + نظام المهام والأولويات والجداول الزمنية</span>
                 </div>
                 <span className="text-[10px] text-emerald-400 font-bold">مفعل</span>
               </div>
               <ul className="list-disc list-inside space-y-1 text-slate-300 pr-1 leading-relaxed">
-                <li>إضافة عداد تنازلي تفاعلي مع نظام إنذار مبكر قبل 5 أيام من انتهاء التجربة.</li>
-                <li>توليد وإصدار شهادات التراخيص الرقمية المعتمدة مع رمز QR قابل للطباعة بصيغة PDF.</li>
-                <li>توسيع لوحة تحكم الإدارة لمتابعة المستخدمين المتصلين، الفروع، العمليات، وحالة التراخيص.</li>
-                <li>إضافة مركز الإشعارات الفورية وبث التنبيهات عبر البريد، النظام، وواتساب.</li>
+                <li>فصل وتأمين المنصة الرئيسية السيادية للمبرمج والمصمم مالك البرنامج (الأستاذ بدر عايض محمد).</li>
+                <li>تدشين وحدة إدارة المهام البرمجية وتصنيف الأولويات الشاملة مع لوحة مؤشرات فورية.</li>
+                <li>إطلاق مصفوفة الجداول الزمنية ومواعيد التسليم مع تتبع الالتزام بالردود خلال 24 ساعة.</li>
+                <li>تفعيل مركز التواصل المباشر مع المنشآت والعملاء وبث التعاميم الموحدة فورياً.</li>
+                <li>محرك الإنعاش والتطهير السيادي السحابي الفائق (Ultra 60 FPS Garbage Collection & Storage Vacuum).</li>
               </ul>
             </div>
 
-            {/* Version 2026.9.0 */}
+            {/* Version 2026.9.2 */}
             <div className="p-4 bg-slate-950/70 rounded-2xl border border-slate-800/80 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono font-bold text-[10px]">
-                    v2026.9.0
+                    v2026.9.2
                   </span>
-                  <span className="font-bold text-slate-200">اعتماد الهوية البصرية الرسمية SAP Green & Gold</span>
+                  <span className="font-bold text-slate-200">ترقية نظام التراخيص وهيكلية SAP Cloud Trial</span>
                 </div>
                 <span className="text-[10px] text-slate-500">مكتمل</span>
               </div>
               <ul className="list-disc list-inside space-y-1 text-slate-400 pr-1 leading-relaxed">
-                <li>تطبيق اللون الأخضر الداكن `#1A6B3C` والذهبي `#D4AF37` على كامل الواجهات والأزرار والنوافذ.</li>
-                <li>تضمين الحزمة القانونية الكاملة (8 وثائق رسمية مطابقة لشروط SAP Cloud Trust Center).</li>
+                <li>إضافة عداد تنازلي تفاعلي مع نظام إنذار مبكر قبل 5 أيام من انتهاء التجربة.</li>
+                <li>توليد وإصدار شهادات التراخيص الرقمية المعتمدة مع رمز QR قابل للطباعة بصيغة PDF.</li>
+                <li>توسيع لوحة تحكم الإدارة لمتابعة المستخدمين المتصلين، الفروع، العمليات، وحالة التراخيص.</li>
               </ul>
             </div>
           </div>

@@ -50,6 +50,7 @@ import { TrustCenterView } from "./TrustCenterView";
 import { soundService } from "../services/notificationSoundService";
 import { BzmtLogo } from "./BzmtLogo";
 import { SystemFooter } from "./SystemFooter";
+import { TenantIsolationService } from "../services/tenantIsolationService";
 
 const ModuleModal = ({ module, onClose }: { module: any; onClose: () => void }) => (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -79,7 +80,7 @@ interface CorporateWebsiteProps {
 
 export const CorporateWebsite: React.FC<CorporateWebsiteProps> = ({ availableBranches, onLoginSuccess }) => {
   const [activeTab, setActiveTab] = useState<"HOME" | "ABOUT" | "MODULES" | "BLOG" | "PRICING" | "CONTACT" | "TRUST_CENTER" | "FAQ">("HOME");
-  const [showLogin, setShowLogin] = useState(false);
+  const [showLogin, setShowLogin] = useState(() => Boolean(TenantIsolationService.resolveActiveTenant()));
   const [showInstantDeploy, setShowInstantDeploy] = useState(false);
   const [defaultShowSaaSOnboarding, setDefaultShowSaaSOnboarding] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

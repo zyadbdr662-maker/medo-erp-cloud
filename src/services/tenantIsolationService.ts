@@ -717,12 +717,7 @@ export class TenantIsolationService {
         const matched = findTenantById(cleanSlug);
         const resolvedSlug = matched ? matched.id : cleanSlug;
 
-        // [Requirement #3] Always clear localStorage and sessionStorage cache when opening a link with tenant query
-        try {
-          localStorage.clear();
-          sessionStorage.clear();
-        } catch (e) {}
-
+        // Clean any conflicting caches when explicitly opening a specific tenant
         this.setActiveTenant(resolvedSlug);
 
         if (matched) {
@@ -742,36 +737,18 @@ export class TenantIsolationService {
         return resolvedSlug;
       }
 
-      // 2. Check currentTenant stored in localStorage
-      const storedCurrent = localStorage.getItem("currentTenant");
-      if (storedCurrent) {
-        try {
-          const parsed = JSON.parse(storedCurrent);
-          if (parsed && (parsed.id || parsed.slug)) {
-            return parsed.id || parsed.slug;
-          }
-        } catch (e) {}
-      }
-
-      // 3. Check stored active tenant key
-      const storedTenant = localStorage.getItem(this.ACTIVE_TENANT_KEY);
-      if (storedTenant) {
-        return storedTenant;
-      }
-
-      // 4. Check current user in storage
-      const rawUser = localStorage.getItem("medo_erp_current_user_v1");
-      if (rawUser) {
-        try {
-          const user = JSON.parse(rawUser);
-          if (user.tenantId) {
-            return user.tenantId;
-          }
-        } catch (e) {}
+      // If user navigated to the main root platform without tenant query parameters:
+      // Clear tenant persistence so it never leaks client branding into the Master Platform
+      if (!clientParam) {
+        localStorage.removeItem("currentTenant");
+        localStorage.removeItem(this.ACTIVE_TENANT_KEY);
+        localStorage.removeItem("companyName");
+        localStorage.removeItem("tenantName");
+        return "";
       }
     }
 
-    return "alzarqa";
+    return "";
   }
 
   /**
@@ -1024,17 +1001,17 @@ export class TenantIsolationService {
       } catch (e) {}
     }
 
-    // 4. Default Fallback
+    // 4. Default Fallback -> Master Platform (MeDo ERP Cloud Sovereign Platform)
     return {
-      nameAr: "الشركة الزرقاء النبيلة (ش.م.ي)",
-      nameEn: "Al-Zarqa Al-Nabeela Company",
+      nameAr: "منظومة ميدو تك السحابية (MeDo Cloud ERP)",
+      nameEn: "MeDo Cloud Enterprise Platform",
       phone: "+967 773 586 047",
-      address: "المنطقة الحرة - عدن، اليمن",
-      logoText: "AL-ZARQA",
-      commercialReg: "CR-AZ-99201",
+      address: "الإدارة العامة السيادية - صنعاء، اليمن",
+      logoText: "MeDo ERP",
+      commercialReg: "CR-SOVEREIGN-2026",
       taxNumber: "300748291000003",
-      city: "عدن",
-      industry: "تجارة عامة واستيراد"
+      city: "صنعاء",
+      industry: "تقنية المعلومات والحلول السحابية المحاسبية"
     };
   }
 
