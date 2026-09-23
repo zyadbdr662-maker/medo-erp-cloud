@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { FormNavigationBar } from "./FormNavigationBar";
 import {
   ShoppingBag,
@@ -148,52 +148,77 @@ export const SalesAndReturnsView: React.FC<SalesAndReturnsViewProps> = ({
     },
   ]);
 
-  // Helper to extract pricing details: Last Selling Price, Purchase Price, Cost Price
-  const getItemPricingDetails = (item: InventoryItem, forCustomerId?: string) => {
-    const currencySymbol = invCurrency === "SAR" ? "ر.س" : invCurrency === "USD" ? "$" : "ر.ي";
+  // --- High-Performance Eager Pricing Index (O(M) single-pass indexing, O(1) instant lookups) ---
+  const pricingIndex = useMemo(() => {
+    const latestSales = new Map<string, { price: number; date: string; customerName: string }>();
+    const customerSales = new Map<string, { price: number; date: string; customerName: string }>();
+    const latestPurchases = new Map<string, { price: number; date: string; vendorName: string }>();
 
-    // 1. Last selling price (آخر سعر بيع)
+    if (!invoices || invoices.length === 0) {
+      return { latestSales, customerSales, latestPurchases };
+    }
+
+    // Sort invoices once by date descending
+    const sorted = [...invoices].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+    for (const inv of sorted) {
+      if (!inv.items || inv.items.length === 0) continue;
+      const isSale = inv.type === "SALES" || (inv.type as string) === "FINAL";
+      const isPurchase = inv.type === "PURCHASE";
+      const cId = inv.customerId || inv.partyId;
+
+      for (const it of inv.items) {
+        if (!it.unitPrice) continue;
+        const key = it.inventoryItemId || it.description?.trim();
+        if (!key) continue;
+
+        if (isSale) {
+          if (!latestSales.has(key)) {
+            latestSales.set(key, { price: it.unitPrice, date: inv.date, customerName: inv.partyName || "" });
+          }
+          if (cId) {
+            const custKey = `${cId}::${key}`;
+            if (!customerSales.has(custKey)) {
+              customerSales.set(custKey, { price: it.unitPrice, date: inv.date, customerName: inv.partyName || "" });
+            }
+          }
+        } else if (isPurchase) {
+          if (!latestPurchases.has(key)) {
+            latestPurchases.set(key, { price: it.unitPrice, date: inv.date, vendorName: inv.partyName || "" });
+          }
+        }
+      }
+    }
+
+    return { latestSales, customerSales, latestPurchases };
+  }, [invoices]);
+
+  // Helper to extract pricing details in O(1) time
+  const getItemPricingDetails = useCallback((item: InventoryItem, forCustomerId?: string) => {
+    const currencySymbol = invCurrency === "SAR" ? "ر.س" : invCurrency === "USD" ? "$" : "ر.ي";
+    const key = item.id;
+    const nameKey = item.nameAr?.trim();
+
     let lastSellingPrice: number | null = item.lastSellingPrice || null;
     let lastSellingDate: string | null = null;
     let lastCustomerName: string | null = null;
 
-    if (invoices && invoices.length > 0) {
-      const salesInvoices = invoices.filter(
-        (inv) => (inv.type === "SALES" || (inv.type as string) === "FINAL") && inv.items && inv.items.length > 0
-      );
-      // Sort newest first
-      const sortedSales = [...salesInvoices].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-
-      // Priority 1: Check previous sale to this specific customer
-      if (forCustomerId) {
-        for (const inv of sortedSales) {
-          if (inv.customerId === forCustomerId || inv.partyId === forCustomerId) {
-            const match = inv.items?.find(
-              (it) => it.inventoryItemId === item.id || it.description?.trim() === item.nameAr?.trim()
-            );
-            if (match && match.unitPrice) {
-              lastSellingPrice = match.unitPrice;
-              lastSellingDate = inv.date;
-              lastCustomerName = inv.partyName || "هذا العميل";
-              break;
-            }
-          }
-        }
+    if (forCustomerId) {
+      const custEntry = pricingIndex.customerSales.get(`${forCustomerId}::${key}`) ||
+                        (nameKey ? pricingIndex.customerSales.get(`${forCustomerId}::${nameKey}`) : undefined);
+      if (custEntry) {
+        lastSellingPrice = custEntry.price;
+        lastSellingDate = custEntry.date;
+        lastCustomerName = custEntry.customerName;
       }
+    }
 
-      // Priority 2: Check latest general selling price across all customers
-      if (!lastSellingPrice) {
-        for (const inv of sortedSales) {
-          const match = inv.items?.find(
-            (it) => it.inventoryItemId === item.id || it.description?.trim() === item.nameAr?.trim()
-          );
-          if (match && match.unitPrice) {
-            lastSellingPrice = match.unitPrice;
-            lastSellingDate = inv.date;
-            lastCustomerName = inv.partyName || null;
-            break;
-          }
-        }
+    if (!lastSellingPrice) {
+      const genEntry = pricingIndex.latestSales.get(key) || (nameKey ? pricingIndex.latestSales.get(nameKey) : undefined);
+      if (genEntry) {
+        lastSellingPrice = genEntry.price;
+        lastSellingDate = genEntry.date;
+        lastCustomerName = genEntry.customerName;
       }
     }
 
@@ -201,37 +226,23 @@ export const SalesAndReturnsView: React.FC<SalesAndReturnsViewProps> = ({
       lastSellingPrice = item.sellingPrice || 0;
     }
 
-    // 2. Purchase price (سعر الشراء)
+    // Purchase price
     let purchasePrice: number | null = item.purchasePrice || null;
     let lastPurchaseDate: string | null = null;
     let lastVendorName: string | null = null;
 
-    if (invoices && invoices.length > 0) {
-      const purchaseInvoices = invoices.filter(
-        (inv) => inv.type === "PURCHASE" && inv.items && inv.items.length > 0
-      );
-      const sortedPurchases = [...purchaseInvoices].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-      for (const inv of sortedPurchases) {
-        const match = inv.items?.find(
-          (it) => it.inventoryItemId === item.id || it.description?.trim() === item.nameAr?.trim()
-        );
-        if (match && match.unitPrice) {
-          purchasePrice = match.unitPrice;
-          lastPurchaseDate = inv.date;
-          lastVendorName = inv.partyName || null;
-          break;
-        }
-      }
+    const purEntry = pricingIndex.latestPurchases.get(key) || (nameKey ? pricingIndex.latestPurchases.get(nameKey) : undefined);
+    if (purEntry) {
+      purchasePrice = purEntry.price;
+      lastPurchaseDate = purEntry.date;
+      lastVendorName = purEntry.vendorName;
     }
 
     if (!purchasePrice) {
       purchasePrice = item.purchasePrice || item.costPrice || 0;
     }
 
-    // 3. Cost price (سعر التكلفة)
     const costPrice = item.costPrice || purchasePrice || 0;
-
-    // 4. Standard approved selling price (سعر البيع المعتمد)
     const standardSellingPrice = item.sellingPrice || 0;
 
     return {
@@ -245,7 +256,7 @@ export const SalesAndReturnsView: React.FC<SalesAndReturnsViewProps> = ({
       standardSellingPrice,
       currencySymbol,
     };
-  };
+  }, [pricingIndex, invCurrency]);
 
   // Prepare Options for Searchable Selects
   const customerOptions: ComboboxOption[] = useMemo(() => {
@@ -265,7 +276,7 @@ export const SalesAndReturnsView: React.FC<SalesAndReturnsViewProps> = ({
         secondaryLabel: `${inv.code} | بيع: ${p.lastSellingPrice.toLocaleString()} | تكلفة: ${p.costPrice.toLocaleString()}`
       };
     });
-  }, [inventoryItems, invCustomerId, invCurrency, invoices]);
+  }, [inventoryItems, invCustomerId, getItemPricingDetails]);
 
   // Calculations for Modal
   const invSubtotal = invItems.reduce((sum, item) => sum + item.total, 0);
@@ -503,6 +514,7 @@ export const SalesAndReturnsView: React.FC<SalesAndReturnsViewProps> = ({
   const [managerPasscode, setManagerPasscode] = useState("");
   const [passcodeError, setPasscodeError] = useState("");
   const [overrideReason, setOverrideReason] = useState("تخفيضات خاصة بالعميل وتصفية كميات بموافقة الإدارة");
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const handleSaveForm = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2358,13 +2370,21 @@ export const SalesAndReturnsView: React.FC<SalesAndReturnsViewProps> = ({
                 </button>
               )}
               <button
+                disabled={isExportingPdf}
                 onClick={async () => {
-                  await exportInvoiceToPdf("INVOICE", selectedInvoiceDetails, currencies);
+                  setIsExportingPdf(true);
+                  setTimeout(async () => {
+                    try {
+                      await exportInvoiceToPdf("INVOICE", selectedInvoiceDetails, currencies);
+                    } finally {
+                      setIsExportingPdf(false);
+                    }
+                  }, 50);
                 }}
-                className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+                className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md active:scale-95 disabled:opacity-50"
               >
-                <FileDown className="w-4 h-4" />
-                تصدير كـ PDF
+                <FileDown className={`w-4 h-4 ${isExportingPdf ? "animate-pulse" : ""}`} />
+                <span>{isExportingPdf ? "جاري التصدير (خلفية)..." : "تصدير كـ PDF"}</span>
               </button>
               <button
                 onClick={() => {

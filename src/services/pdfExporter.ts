@@ -21,10 +21,20 @@ export async function exportElementToPdf(elementId: string, filename: string): P
     return false;
   }
 
+  // 1. Ensure fonts are fully loaded to avoid blank/unrendered text
+  if (document.fonts) {
+    try {
+      await document.fonts.ready;
+    } catch (e) {
+      // ignore
+    }
+  }
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
   const cleanFilename = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
 
   const opt = {
-    margin: [8, 8, 8, 8],
+    margin: [6, 6, 6, 6],
     filename: cleanFilename,
     image: { type: "jpeg", quality: 0.98 },
     html2canvas: {
@@ -32,6 +42,9 @@ export async function exportElementToPdf(elementId: string, filename: string): P
       useCORS: true,
       logging: false,
       backgroundColor: "#ffffff",
+      windowWidth: 820,
+      scrollX: 0,
+      scrollY: 0,
     },
     jsPDF: {
       unit: "mm",
@@ -41,28 +54,118 @@ export async function exportElementToPdf(elementId: string, filename: string): P
     pagebreak: { mode: ["avoid-all", "css", "legacy"] },
   };
 
+  // 2. Clone the element to an isolated top-level container to prevent clipping and transform issues
+  const clone = element.cloneNode(true) as HTMLElement;
+  clone.id = `${elementId}-export-clone`;
+
+  // Preserve canvases (like ZATCA QR code)
+  const origCanvases = element.querySelectorAll("canvas");
+  const cloneCanvases = clone.querySelectorAll("canvas");
+  origCanvases.forEach((orig, idx) => {
+    const dest = cloneCanvases[idx];
+    if (dest) {
+      dest.width = orig.width;
+      dest.height = orig.height;
+      const destCtx = dest.getContext("2d");
+      if (destCtx) {
+        destCtx.drawImage(orig, 0, 0);
+      }
+    }
+  });
+
+  // Preserve form inputs if any
+  const origInputs = element.querySelectorAll("input, select, textarea");
+  const cloneInputs = clone.querySelectorAll("input, select, textarea");
+  origInputs.forEach((orig, idx) => {
+    const dest = cloneInputs[idx] as HTMLInputElement;
+    if (dest) {
+      dest.value = (orig as HTMLInputElement).value;
+    }
+  });
+
+  // Apply clean high-contrast accounting styling on clone (No dark bars, pure white tables)
+  clone.style.margin = "0 auto";
+  clone.style.padding = "20px";
+  clone.style.width = "794px"; // Standard A4 width in px at 96 DPI
+  clone.style.maxWidth = "794px";
+  clone.style.boxSizing = "border-box";
+  clone.style.backgroundColor = "#FFFFFF";
+  clone.style.color = "#000000";
+  clone.style.transform = "none";
+  clone.style.boxShadow = "none";
+  clone.style.border = "none";
+  clone.style.visibility = "visible";
+  clone.style.display = "block";
+
+  // Enforce white background and dark text for all tables and rows in clone
+  const tables = clone.querySelectorAll("table");
+  tables.forEach((t) => {
+    t.style.backgroundColor = "#FFFFFF";
+    t.style.borderCollapse = "collapse";
+    t.style.width = "100%";
+    t.style.border = "1px solid #CBD5E1";
+  });
+  const headers = clone.querySelectorAll("th");
+  headers.forEach((th) => {
+    th.style.backgroundColor = "#F8FAFC";
+    th.style.color = "#0A2540";
+    th.style.borderColor = "#CBD5E1";
+    th.style.boxShadow = "none";
+    th.style.fontWeight = "700";
+  });
+  const cells = clone.querySelectorAll("td");
+  cells.forEach((td) => {
+    td.style.backgroundColor = "#FFFFFF";
+    td.style.color = "#1A2B4C";
+    td.style.borderColor = "#E2E8F0";
+    td.style.boxShadow = "none";
+  });
+  const allCloned = clone.querySelectorAll("*");
+  allCloned.forEach((node) => {
+    const el = node as HTMLElement;
+    el.style.boxShadow = "none";
+    el.style.textShadow = "none";
+    el.style.filter = "none";
+    if (el.tagName !== "BUTTON" && !el.classList.contains("no-print")) {
+      el.style.visibility = "visible";
+    }
+  });
+
+  const exportWrapper = document.createElement("div");
+  exportWrapper.id = "isolated-pdf-export-wrapper";
+  exportWrapper.style.position = "fixed";
+  exportWrapper.style.top = "0";
+  exportWrapper.style.left = "0";
+  exportWrapper.style.zIndex = "999999";
+  exportWrapper.style.backgroundColor = "#FFFFFF";
+  exportWrapper.style.color = "#000000";
+  exportWrapper.style.margin = "0";
+  exportWrapper.style.padding = "0";
+  exportWrapper.style.overflow = "visible";
+  exportWrapper.style.pointerEvents = "none";
+  exportWrapper.appendChild(clone);
+  document.body.appendChild(exportWrapper);
+
   // --- STYLE SANITIZATION WORKAROUND FOR TAILWIND V4 OKLCH/OKLAB html2canvas BUG ---
   const styleElements = Array.from(document.querySelectorAll("style"));
-  const originalStyleContents = styleElements.map(style => style.innerHTML);
+  const originalStyleContents = styleElements.map((style) => style.innerHTML);
   const modifiedRules: { sheet: CSSStyleSheet; index: number; ruleText: string }[] = [];
 
   try {
     // 1. Sanitize <style> tags (common in Vite development)
-    styleElements.forEach(style => {
+    styleElements.forEach((style) => {
       let text = style.innerHTML;
       if (text.includes("oklab") || text.includes("oklch")) {
-        // Replace oklab(...) with generic gray
         text = text.replace(/oklab\([^)]+\)/g, "rgb(128, 128, 128)");
-        // Replace oklch(...) with equivalent fallback rgb colors depending on lightness
         text = text.replace(/oklch\(([^)]+)\)/g, (match, p1) => {
           const parts = p1.trim().split(/[\s/]+/);
           const lightness = parseFloat(parts[0]);
           if (!isNaN(lightness)) {
-            if (lightness > 0.8) return "rgb(248, 250, 252)"; // very light gray
-            if (lightness > 0.6) return "rgb(203, 213, 225)"; // light gray
-            if (lightness > 0.4) return "rgb(100, 116, 139)"; // medium slate
-            if (lightness > 0.2) return "rgb(30, 41, 59)";    // dark slate
-            return "rgb(15, 23, 42)";                         // very dark slate
+            if (lightness > 0.8) return "rgb(248, 250, 252)";
+            if (lightness > 0.6) return "rgb(203, 213, 225)";
+            if (lightness > 0.4) return "rgb(100, 116, 139)";
+            if (lightness > 0.2) return "rgb(30, 41, 59)";
+            return "rgb(15, 23, 42)";
           }
           return "rgb(100, 116, 139)";
         });
@@ -70,7 +173,7 @@ export async function exportElementToPdf(elementId: string, filename: string): P
       }
     });
 
-    // 2. Remove remaining oklab/oklch rules from CSSStyleSheets directly (common in production bundles)
+    // 2. Remove remaining oklab/oklch rules from CSSStyleSheets directly
     for (let i = 0; i < document.styleSheets.length; i++) {
       const sheet = document.styleSheets[i] as CSSStyleSheet;
       try {
@@ -81,7 +184,7 @@ export async function exportElementToPdf(elementId: string, filename: string): P
             modifiedRules.push({
               sheet,
               index: j,
-              ruleText: rule.cssText
+              ruleText: rule.cssText,
             });
             sheet.deleteRule(j);
           }
@@ -96,7 +199,7 @@ export async function exportElementToPdf(elementId: string, filename: string): P
 
   try {
     // @ts-ignore
-    await html2pdf().set(opt).from(element).save();
+    await html2pdf().set(opt).from(clone).save();
     return true;
   } catch (err) {
     console.error("PDF export error:", err);
@@ -104,14 +207,21 @@ export async function exportElementToPdf(elementId: string, filename: string): P
     window.print();
     return false;
   } finally {
+    // --- REMOVE ISOLATED WRAPPER ---
+    try {
+      if (exportWrapper.parentNode) {
+        exportWrapper.parentNode.removeChild(exportWrapper);
+      }
+    } catch (e) {
+      // ignore
+    }
+
     // --- RESTORE ORIGINAL STYLES ---
     try {
-      // 1. Restore <style> elements content
       styleElements.forEach((style, index) => {
         style.innerHTML = originalStyleContents[index];
       });
 
-      // 2. Restore deleted stylesheet rules in ascending index order
       modifiedRules.sort((a, b) => a.index - b.index);
       for (const item of modifiedRules) {
         try {
@@ -187,14 +297,14 @@ export async function exportInvoiceToPdf(
   let tableHtml = "";
   if (documentType === "INVOICE" && documentData.items) {
     tableHtml = `
-      <table style="width:100%; border-collapse:collapse; margin-top:16px; font-size:14px; text-align:right; border:1px solid #E0E6ED;">
+      <table style="width:100%; border-collapse:collapse; margin-top:16px; font-size:13px; text-align:right; border:1px solid #CBD5E1; background-color:#FFFFFF;">
         <thead>
-          <tr style="background-color:#0A2540; color:#FFFFFF;">
-            <th style="padding:10px 14px; border:1px solid #0A2540; text-align:center; font-weight:700; font-size:14px;">#</th>
-            <th style="padding:10px 14px; border:1px solid #0A2540; font-weight:700; font-size:14px;">بيان الصنف / الخدمة</th>
-            <th style="padding:10px 14px; border:1px solid #0A2540; text-align:left; font-weight:700; font-size:14px;">الكمية</th>
-            <th style="padding:10px 14px; border:1px solid #0A2540; text-align:left; font-weight:700; font-size:14px;">سعر الوحدة</th>
-            <th style="padding:10px 14px; border:1px solid #0A2540; text-align:left; font-weight:700; font-size:14px;">الإجمالي</th>
+          <tr style="background-color:#F8FAFC; color:#0A2540;">
+            <th style="padding:10px 14px; border:1px solid #CBD5E1; text-align:center; font-weight:700; font-size:13px; color:#0A2540;">#</th>
+            <th style="padding:10px 14px; border:1px solid #CBD5E1; font-weight:700; font-size:13px; color:#0A2540;">بيان الصنف / الخدمة</th>
+            <th style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-weight:700; font-size:13px; color:#0A2540;">الكمية</th>
+            <th style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-weight:700; font-size:13px; color:#0A2540;">سعر الوحدة</th>
+            <th style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-weight:700; font-size:13px; color:#0A2540;">الإجمالي</th>
           </tr>
         </thead>
         <tbody>
@@ -202,11 +312,11 @@ export async function exportInvoiceToPdf(
             .map(
               (item: any, idx: number) => `
             <tr style="background-color:${idx % 2 === 1 ? "#F8FAFC" : "#FFFFFF"};">
-              <td style="padding:9px 14px; border:1px solid #E0E6ED; text-align:center; font-family:monospace; color:#1A2B4C; font-size:14px; font-weight:700;">${idx + 1}</td>
-              <td style="padding:9px 14px; border:1px solid #E0E6ED; color:#1A2B4C; font-size:14px; font-weight:700;">${item.description || item.itemName}</td>
-              <td style="padding:9px 14px; border:1px solid #E0E6ED; text-align:left; font-family:monospace; color:#1A2B4C; font-size:14px; font-weight:700;">${item.quantity} ${item.unit || ""}</td>
-              <td style="padding:9px 14px; border:1px solid #E0E6ED; text-align:left; font-family:monospace; color:#1A2B4C; font-size:14px; font-weight:700;">${formatNumberOnly(item.unitPrice)}</td>
-              <td style="padding:9px 14px; border:1px solid #E0E6ED; text-align:left; font-family:monospace; font-weight:700; color:#1A2B4C; font-size:14px;">${formatNumberOnly(item.total)}</td>
+              <td style="padding:9px 14px; border:1px solid #CBD5E1; text-align:center; font-family:monospace; color:#1A2B4C; font-size:13px; font-weight:700;">${idx + 1}</td>
+              <td style="padding:9px 14px; border:1px solid #CBD5E1; color:#1A2B4C; font-size:13px; font-weight:700;">${item.description || item.itemName}</td>
+              <td style="padding:9px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; color:#1A2B4C; font-size:13px; font-weight:700;">${item.quantity} ${item.unit || ""}</td>
+              <td style="padding:9px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; color:#1A2B4C; font-size:13px; font-weight:700;">${formatNumberOnly(item.unitPrice)}</td>
+              <td style="padding:9px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; font-weight:700; color:#1A2B4C; font-size:13px;">${formatNumberOnly(item.total)}</td>
             </tr>
           `
             )
@@ -214,8 +324,8 @@ export async function exportInvoiceToPdf(
         </tbody>
         <tfoot>
           <tr style="background-color:#F1F5F9; font-weight:700;">
-            <td colspan="4" style="padding:10px 14px; border:1px solid #E0E6ED; color:#0A2540; font-size:14px;">الإجمالي العام:</td>
-            <td style="padding:10px 14px; border:1px solid #E0E6ED; text-align:left; font-family:monospace; color:#0A2540; font-size:15px; font-weight:700;">
+            <td colspan="4" style="padding:10px 14px; border:1px solid #CBD5E1; color:#0A2540; font-size:13px;">الإجمالي العام:</td>
+            <td style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; color:#0A2540; font-size:14px; font-weight:700;">
               ${formatMoney(documentData.totalAmount || documentData.grandTotal, documentData.currency, currencies)}
             </td>
           </tr>
@@ -224,14 +334,14 @@ export async function exportInvoiceToPdf(
     `;
   } else if (documentType === "JOURNAL" && documentData.lines) {
     tableHtml = `
-      <table style="width:100%; border-collapse:collapse; margin-top:16px; font-size:14px; text-align:right; border:1px solid #E0E6ED;">
+      <table style="width:100%; border-collapse:collapse; margin-top:16px; font-size:13px; text-align:right; border:1px solid #CBD5E1; background-color:#FFFFFF;">
         <thead>
-          <tr style="background-color:#0A2540; color:#FFFFFF;">
-            <th style="padding:10px 14px; border:1px solid #0A2540; font-weight:700; font-size:14px;">رمز الحساب</th>
-            <th style="padding:10px 14px; border:1px solid #0A2540; font-weight:700; font-size:14px;">اسم الحساب</th>
-            <th style="padding:10px 14px; border:1px solid #0A2540; text-align:left; font-weight:700; font-size:14px;">مدين</th>
-            <th style="padding:10px 14px; border:1px solid #0A2540; text-align:left; font-weight:700; font-size:14px;">دائن</th>
-            <th style="padding:10px 14px; border:1px solid #0A2540; font-weight:700; font-size:14px;">شرح السطر</th>
+          <tr style="background-color:#F8FAFC; color:#0A2540;">
+            <th style="padding:10px 14px; border:1px solid #CBD5E1; font-weight:700; font-size:13px; color:#0A2540;">رمز الحساب</th>
+            <th style="padding:10px 14px; border:1px solid #CBD5E1; font-weight:700; font-size:13px; color:#0A2540;">اسم الحساب</th>
+            <th style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-weight:700; font-size:13px; color:#0A2540;">مدين</th>
+            <th style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-weight:700; font-size:13px; color:#0A2540;">دائن</th>
+            <th style="padding:10px 14px; border:1px solid #CBD5E1; font-weight:700; font-size:13px; color:#0A2540;">شرح السطر</th>
           </tr>
         </thead>
         <tbody>
@@ -239,15 +349,15 @@ export async function exportInvoiceToPdf(
             .map(
               (line: any, idx: number) => `
             <tr style="background-color:${idx % 2 === 1 ? "#F8FAFC" : "#FFFFFF"};">
-              <td style="padding:9px 14px; border:1px solid #E0E6ED; font-family:monospace; font-weight:700; color:#1A2B4C; font-size:14px;">${line.accountCode}</td>
-              <td style="padding:9px 14px; border:1px solid #E0E6ED; font-weight:700; color:#1A2B4C; font-size:14px;">${line.accountNameAr}</td>
-              <td style="padding:9px 14px; border:1px solid #E0E6ED; text-align:left; font-family:monospace; font-weight:700; color:#1A2B4C; font-size:14px;">
+              <td style="padding:9px 14px; border:1px solid #CBD5E1; font-family:monospace; font-weight:700; color:#1A2B4C; font-size:13px;">${line.accountCode}</td>
+              <td style="padding:9px 14px; border:1px solid #CBD5E1; font-weight:700; color:#1A2B4C; font-size:13px;">${line.accountNameAr}</td>
+              <td style="padding:9px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; font-weight:700; color:#1A2B4C; font-size:13px;">
                 ${line.debit > 0 ? formatNumberOnly(line.debit) : ""}
               </td>
-              <td style="padding:9px 14px; border:1px solid #E0E6ED; text-align:left; font-family:monospace; font-weight:700; color:#1A2B4C; font-size:14px;">
+              <td style="padding:9px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; font-weight:700; color:#1A2B4C; font-size:13px;">
                 ${line.credit > 0 ? formatNumberOnly(line.credit) : ""}
               </td>
-              <td style="padding:9px 14px; border:1px solid #E0E6ED; color:#4A5B6F; font-size:14px; font-weight:700;">${line.memo || "-"}</td>
+              <td style="padding:9px 14px; border:1px solid #CBD5E1; color:#4A5B6F; font-size:13px; font-weight:700;">${line.memo || "-"}</td>
             </tr>
           `
             )
@@ -255,10 +365,10 @@ export async function exportInvoiceToPdf(
         </tbody>
         <tfoot>
           <tr style="background-color:#F1F5F9; font-weight:700;">
-            <td colspan="2" style="padding:10px 14px; border:1px solid #E0E6ED; color:#0A2540; font-size:14px;">الإجمالي:</td>
-            <td style="padding:10px 14px; border:1px solid #E0E6ED; text-align:left; font-family:monospace; color:#0A2540; font-size:15px; font-weight:700;">${formatNumberOnly(documentData.totalDebit)}</td>
-            <td style="padding:10px 14px; border:1px solid #E0E6ED; text-align:left; font-family:monospace; color:#0A2540; font-size:15px; font-weight:700;">${formatNumberOnly(documentData.totalCredit)}</td>
-            <td style="padding:10px 14px; border:1px solid #E0E6ED;"></td>
+            <td colspan="2" style="padding:10px 14px; border:1px solid #CBD5E1; color:#0A2540; font-size:13px;">الإجمالي:</td>
+            <td style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; color:#0A2540; font-size:14px; font-weight:700;">${formatNumberOnly(documentData.totalDebit)}</td>
+            <td style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; color:#0A2540; font-size:14px; font-weight:700;">${formatNumberOnly(documentData.totalCredit)}</td>
+            <td style="padding:10px 14px; border:1px solid #CBD5E1;"></td>
           </tr>
         </tfoot>
       </table>

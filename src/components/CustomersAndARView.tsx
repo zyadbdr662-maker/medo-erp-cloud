@@ -18,6 +18,7 @@ import {
   QrCode,
   Share2,
   Upload,
+  Database,
 } from "lucide-react";
 import { TenantIsolationService } from "../services/tenantIsolationService";
 import {
@@ -46,6 +47,7 @@ interface CustomersAndARViewProps {
   onSaveInvoice: (invoice: Invoice) => void;
   onPrintDocument: (docType: "INVOICE", data: any) => void;
   onShareDocument?: (data: any) => void;
+  onOpenMohasibMigration?: () => void;
 }
 
 export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
@@ -61,6 +63,7 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
   onSaveInvoice,
   onPrintDocument,
   onShareDocument,
+  onOpenMohasibMigration,
 }) => {
   const [activeTab, setActiveTab] = useState<"CUSTOMERS" | "INVOICES" | "AGING">("CUSTOMERS");
 
@@ -458,6 +461,16 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onOpenMohasibMigration && (
+            <button
+              onClick={onOpenMohasibMigration}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-600/20 to-amber-500/10 hover:from-amber-600/30 hover:to-amber-500/20 text-[#d4af37] text-xs font-bold border border-[#d4af37]/40 transition-colors shadow-sm cursor-pointer"
+              title="ترحيل بيانات العملاء والأرصدة من تطبيق المحاسب المحترف"
+            >
+              <Database className="w-4 h-4 text-[#d4af37]" />
+              <span>ترحيل من المحاسب المحترف</span>
+            </button>
+          )}
           <button
             onClick={() => setShowImportModal(true)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors"

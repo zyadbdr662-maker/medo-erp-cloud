@@ -87,6 +87,7 @@ export type NavTab =
   | "CENTRAL_ARCHIVE"
   | "LEGAL_DOCUMENTS"
   | "AI_ASSISTANT"
+  | "DATA_MIGRATION"
   | "HUAWEI_CLOUD"
   | "ALIBABA_CLOUD"
   | "QQ_CLOUD";
@@ -427,6 +428,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: DatabaseBackup,
       badge: "تلقائي",
       badgeColor: "bg-blue-950 text-blue-300 border border-blue-500/50 font-bold",
+      section: "الإعدادات والنظام",
+    },
+    {
+      id: "DATA_MIGRATION",
+      labelAr: "ترحيل بيانات المحاسب المحترف",
+      labelEn: "Android Mohasib Migration",
+      icon: Database,
+      badge: "أندرويد / SQLite",
+      badgeColor: "bg-amber-950 text-amber-300 border border-amber-500/50 font-bold",
       section: "الإعدادات والنظام",
     },
     {

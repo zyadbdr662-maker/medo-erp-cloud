@@ -1409,7 +1409,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                 </label>
               </div>
 
-              {/* Submit Button: إنشاء حساب المنشأة */}
+              {/* Submit Button: تسجيل منشأة جديدة */}
               <button
                 id="reg-submit-btn"
                 type="submit"
@@ -1419,12 +1419,12 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                 {isLoading ? (
                   <>
                     <RefreshCw className="w-5 h-5 animate-spin text-[#0a2540]" />
-                    <span>جاري إنشاء وتخصيص بيئة المنشأة...</span>
+                    <span>جاري تسجيل المنشأة...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 text-[#0a2540]" />
-                    <span>إنشاء حساب المنشأة</span>
+                    <span>تسجيل منشأة جديدة</span>
                   </>
                 )}
               </button>
@@ -1537,19 +1537,18 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
       >
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-400">
           
-          {/* Sovereign & Trust Links */}
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+          {/* Sovereign & Trust Links as clean small text links */}
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs text-slate-400">
             <button
               type="button"
               onClick={() => {
                 setSovereignInitialMode("RESTRICTED");
                 setShowSovereignPortal(true);
               }}
-              className="hover:text-amber-400 transition-colors flex items-center gap-1.5 cursor-pointer font-bold text-[#d4af37]"
+              className="hover:text-[#d4af37] transition-colors cursor-pointer text-slate-400 hover:underline"
               title="بوابة التحقق السيادي للإدارة العليا"
             >
-              <Lock className="w-3.5 h-3.5 text-[#d4af37]" />
-              <span>بوابة الإدارة السيادية (Sovereign Admin)</span>
+              الإدارة السيادية
             </button>
 
             <span className="text-slate-700">•</span>
@@ -1559,10 +1558,9 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                 <button
                   type="button"
                   onClick={onOpenTrustCenter}
-                  className="hover:text-cyan-400 transition-colors flex items-center gap-1.5 cursor-pointer font-medium"
+                  className="hover:text-cyan-400 transition-colors cursor-pointer text-slate-400 hover:underline"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>مركز الثقة (Trust Center)</span>
+                  مركز الثقة
                 </button>
                 <span className="text-slate-700">•</span>
               </>
@@ -1571,10 +1569,9 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
             <button
               type="button"
               onClick={() => setComplianceReportOpen(true)}
-              className="hover:text-emerald-400 transition-colors flex items-center gap-1.5 cursor-pointer font-medium"
+              className="hover:text-emerald-400 transition-colors cursor-pointer text-slate-400 hover:underline"
             >
-              <Award className="w-3.5 h-3.5 text-emerald-400" />
-              <span>معايير SAP</span>
+              معايير SAP
             </button>
 
             <span className="text-slate-700">•</span>
@@ -1584,10 +1581,9 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
                 <button
                   type="button"
                   onClick={onOpenCorporateSite}
-                  className="hover:text-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer font-medium"
+                  className="hover:text-amber-300 transition-colors cursor-pointer text-slate-400 hover:underline"
                 >
-                  <Briefcase className="w-3.5 h-3.5 text-amber-300" />
-                  <span>الموقع التعريفي</span>
+                  الموقع التعريفي
                 </button>
                 <span className="text-slate-700">•</span>
               </>
@@ -1596,7 +1592,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
             <button
               type="button"
               onClick={() => openLegalPolicy("TERMS")}
-              className="hover:text-slate-200 transition cursor-pointer"
+              className="hover:text-slate-200 transition-colors cursor-pointer text-slate-400 hover:underline"
             >
               شروط الاستخدام
             </button>
@@ -1606,7 +1602,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
             <button
               type="button"
               onClick={() => openLegalPolicy("PRIVACY")}
-              className="hover:text-slate-200 transition cursor-pointer"
+              className="hover:text-slate-200 transition-colors cursor-pointer text-slate-400 hover:underline"
             >
               سياسة الخصوصية
             </button>

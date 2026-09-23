@@ -276,14 +276,14 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
 
   const colors = {
     canvasBg: isLight ? "#FFFFFF" : "#1E2A3A",
-    border: isLight ? "#E0E6ED" : "#2A3F5F",
+    border: isLight ? "#CBD5E1" : "#2A3F5F",
     cardBg: isLight ? "#F8FAFC" : "#162231",
     title: isLight ? "#0A2540" : "#FFFFFF",
     body: isLight ? "#1A2B4C" : "#E8ECF1",
     secondary: isLight ? "#4A5B6F" : "#B0C4DE",
-    thBg: isLight ? "#0A2540" : "#1A3A6A",
-    thText: "#FFFFFF",
-    tdText: isLight ? "#1A2B4C" : "#E8ECF1",
+    thBg: isLight ? "#F8FAFC" : "#1A3A6A",
+    thText: isLight ? "#0A2540" : "#FFFFFF",
+    tdText: isLight ? "#000000" : "#E8ECF1",
     tdAltBg: isLight ? "#F8FAFC" : "#141D2B",
     tdTotalBg: isLight ? "#F1F5F9" : "#162231",
     signatureText: isLight ? "#0A2540" : "#FFFFFF",
@@ -292,19 +292,39 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    const wasDark = previewMode === "DARK";
+    if (wasDark) {
+      setPreviewMode("LIGHT");
+      setTimeout(() => {
+        window.print();
+        setTimeout(() => setPreviewMode("DARK"), 1000);
+      }, 120);
+    } else {
+      window.print();
+    }
   };
 
   const handleExportPdf = async () => {
     setIsExporting(true);
+    const wasDark = previewMode === "DARK";
+    if (wasDark) {
+      setPreviewMode("LIGHT");
+      await new Promise((r) => setTimeout(r, 120));
+    }
     const docNum =
       documentData.invoiceNumber ||
       documentData.voucherNumber ||
       documentData.entryNumber ||
       "001";
     const filename = `مستند_${documentType}_${docNum}_${new Date().toISOString().split("T")[0]}.pdf`;
-    await exportElementToPdf("printable-document-canvas", filename);
-    setIsExporting(false);
+    try {
+      await exportElementToPdf("printable-document-canvas", filename);
+    } finally {
+      if (wasDark) {
+        setPreviewMode("DARK");
+      }
+      setIsExporting(false);
+    }
   };
 
   const getShareText = (format: "WHATSAPP" | "SMS") => {
@@ -1164,7 +1184,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                         style={{
                           backgroundColor: colors.thBg,
                           color: colors.thText,
-                          borderColor: isLight ? "#0A2540" : colors.border,
+                          borderColor: colors.border,
                         }}
                       >
                         رمز الحساب
@@ -1174,7 +1194,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                         style={{
                           backgroundColor: colors.thBg,
                           color: colors.thText,
-                          borderColor: isLight ? "#0A2540" : colors.border,
+                          borderColor: colors.border,
                         }}
                       >
                         اسم الحساب
@@ -1184,7 +1204,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                         style={{
                           backgroundColor: colors.thBg,
                           color: colors.thText,
-                          borderColor: isLight ? "#0A2540" : colors.border,
+                          borderColor: colors.border,
                         }}
                       >
                         مدين
@@ -1194,7 +1214,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                         style={{
                           backgroundColor: colors.thBg,
                           color: colors.thText,
-                          borderColor: isLight ? "#0A2540" : colors.border,
+                          borderColor: colors.border,
                         }}
                       >
                         دائن
@@ -1204,7 +1224,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                         style={{
                           backgroundColor: colors.thBg,
                           color: colors.thText,
-                          borderColor: isLight ? "#0A2540" : colors.border,
+                          borderColor: colors.border,
                         }}
                       >
                         شرح السطر
@@ -1427,7 +1447,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                         style={{
                           backgroundColor: colors.thBg,
                           color: colors.thText,
-                          borderColor: isLight ? "#0A2540" : colors.border,
+                          borderColor: colors.border,
                         }}
                       >
                         #
@@ -1437,7 +1457,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                         style={{
                           backgroundColor: colors.thBg,
                           color: colors.thText,
-                          borderColor: isLight ? "#0A2540" : colors.border,
+                          borderColor: colors.border,
                         }}
                       >
                         بيان الصنف / الخدمة
@@ -1447,7 +1467,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                         style={{
                           backgroundColor: colors.thBg,
                           color: colors.thText,
-                          borderColor: isLight ? "#0A2540" : colors.border,
+                          borderColor: colors.border,
                         }}
                       >
                         الكمية
@@ -1457,7 +1477,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                         style={{
                           backgroundColor: colors.thBg,
                           color: colors.thText,
-                          borderColor: isLight ? "#0A2540" : colors.border,
+                          borderColor: colors.border,
                         }}
                       >
                         سعر الوحدة
@@ -1467,7 +1487,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                         style={{
                           backgroundColor: colors.thBg,
                           color: colors.thText,
-                          borderColor: isLight ? "#0A2540" : colors.border,
+                          borderColor: colors.border,
                         }}
                       >
                         الإجمالي

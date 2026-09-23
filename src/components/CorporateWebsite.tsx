@@ -1553,17 +1553,6 @@ export const CorporateWebsite: React.FC<CorporateWebsiteProps> = ({ availableBra
       {/* ============================================================== */}
       {showLogin && (
         <div className="fixed inset-0 z-50 bg-[#050B14] overflow-y-auto overflow-x-hidden flex flex-col">
-          <div className="sticky top-2 right-2 z-50 self-end mr-3 mt-2 sm:mr-6 sm:mt-3">
-            <button 
-              id="close-login-modal-btn"
-              onClick={() => setShowLogin(false)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#0a2540]/90 hover:bg-[#1a3a6a] border border-[#d4af37]/40 text-amber-200 hover:text-white text-xs font-bold transition-all shadow-lg cursor-pointer backdrop-blur-md"
-              title="العودة إلى الموقع الرئيسي"
-            >
-              <X className="w-4 h-4 text-[#d4af37]" />
-              <span>العودة للموقع الرئيسي</span>
-            </button>
-          </div>
           <div className="flex-1 w-full flex flex-col">
             <LoginModal 
               availableBranches={availableBranches} 

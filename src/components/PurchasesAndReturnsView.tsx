@@ -153,6 +153,7 @@ export const PurchasesAndReturnsView: React.FC<PurchasesAndReturnsViewProps> = (
   const [isOcrScanning, setIsOcrScanning] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [ocrSuccess, setOcrSuccess] = useState<string | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [showOcrPanel, setShowOcrPanel] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
   
@@ -2177,13 +2178,21 @@ export const PurchasesAndReturnsView: React.FC<PurchasesAndReturnsViewProps> = (
                 </button>
               )}
               <button
+                disabled={isExportingPdf}
                 onClick={async () => {
-                  await exportInvoiceToPdf("INVOICE", selectedPurchaseDetails, currencies);
+                  setIsExportingPdf(true);
+                  setTimeout(async () => {
+                    try {
+                      await exportInvoiceToPdf("INVOICE", selectedPurchaseDetails, currencies);
+                    } finally {
+                      setIsExportingPdf(false);
+                    }
+                  }, 50);
                 }}
-                className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+                className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md active:scale-95 disabled:opacity-50"
               >
-                <FileDown className="w-4 h-4" />
-                تصدير كـ PDF
+                <FileDown className={`w-4 h-4 ${isExportingPdf ? "animate-pulse" : ""}`} />
+                <span>{isExportingPdf ? "جاري التصدير (خلفية)..." : "تصدير كـ PDF"}</span>
               </button>
               <button
                 onClick={() => {

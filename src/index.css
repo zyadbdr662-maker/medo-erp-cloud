@@ -373,53 +373,6 @@ aside .text-slate-400, aside .text-slate-500 {
   color: #6D28D9 !important; /* بنفسجي داكن */
 }
 
-@media print {
-  /* 1. Hide non-printable layout elements entirely to prevent blank pages and spacing issues */
-  #root > *,
-  aside,
-  header,
-  nav,
-  .no-print,
-  button,
-  .btn,
-  .print-hidden,
-  .fixed:not(.z-50) {
-    display: none !important;
-  }
-
-  /* 2. Style the print page */
-  body {
-    background-color: #FFFFFF !important;
-    background: #FFFFFF !important;
-    color: #000000 !important;
-  }
-
-  /* 3. Hide all body elements by default to prevent overlap bleed-through */
-  body * {
-    visibility: hidden !important;
-  }
-
-  /* 4. Only show the printable canvas */
-  .doc-canvas,
-  .doc-canvas * {
-    visibility: visible !important;
-  }
-
-  /* 5. Position the printable canvas perfectly on the top-left */
-  .doc-canvas {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    display: block !important;
-  }
-}
-
 /* High Contrast Accessibility Mode - Global Override */
 .high-contrast,
 .high-contrast body,
@@ -709,18 +662,19 @@ aside .text-slate-400, aside .text-slate-500 {
 }
 
 .doc-mode-light .doc-table {
-  border: 1px solid #E0E6ED !important;
+  border: 1px solid #CBD5E1 !important;
 }
 
 .doc-mode-light .doc-table-th {
-  background-color: #0A2540 !important;
-  color: #FFFFFF !important;
-  border: 1px solid #0A2540 !important;
+  background-color: #F8FAFC !important;
+  color: #0A2540 !important;
+  border: 1px solid #CBD5E1 !important;
+  font-weight: 700 !important;
 }
 
 .doc-mode-light .doc-table-td {
   color: #1A2B4C !important;
-  border: 1px solid #E0E6ED !important;
+  border: 1px solid #E2E8F0 !important;
   background-color: #FFFFFF !important;
 }
 
@@ -732,7 +686,7 @@ aside .text-slate-400, aside .text-slate-500 {
   background-color: #F1F5F9 !important;
   font-weight: 700 !important;
   color: #0A2540 !important;
-  border: 1px solid #E0E6ED !important;
+  border: 1px solid #CBD5E1 !important;
 }
 
 .doc-mode-light .doc-signature {
@@ -864,11 +818,37 @@ aside .text-slate-400, aside .text-slate-500 {
 @media print {
   html, body {
     background-color: #FFFFFF !important;
+    background: #FFFFFF !important;
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* Make sure #root and modals flow into print pages without being clipped or hidden */
+  #root,
+  #root > div,
+  .fixed.inset-0 {
+    position: static !important;
+    overflow: visible !important;
+    background: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* CRITICAL: Eliminate all shadows, dark bands, glows, and filters in print/PDF */
+  *, *::before, *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
   }
 
   /* Hide interactive non-printable UI elements */
@@ -906,11 +886,67 @@ aside .text-slate-400, aside .text-slate-500 {
   }
 
   .doc-body-text,
-  .doc-statement,
-  .doc-table-td {
+  .doc-statement {
     color: #000000 !important;
     background-color: #FFFFFF !important;
-    border-color: #CBD5E1 !important;
+  }
+
+  /* Official High-Contrast Accounting Table: White/Light Header, Pure White Body, Crisp Black Text */
+  .doc-table,
+  table {
+    background-color: #FFFFFF !important;
+    border-collapse: collapse !important;
+    border: 1px solid #94A3B8 !important;
+    box-shadow: none !important;
+    width: 100% !important;
+  }
+
+  .doc-table-th,
+  table th,
+  th {
+    background-color: #F8FAFC !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+    border: 1px solid #94A3B8 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .doc-table-th *,
+  table th *,
+  th * {
+    color: #000000 !important;
+    font-weight: 700 !important;
+  }
+
+  .doc-table-td,
+  table td,
+  td {
+    color: #000000 !important;
+    background-color: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    box-shadow: none !important;
+  }
+
+  .doc-table-td *,
+  table td *,
+  td * {
+    color: #000000 !important;
+  }
+
+  .doc-table-tr-alt td,
+  .doc-table-tr-alt .doc-table-td {
+    background-color: #F8FAFC !important;
+  }
+
+  .doc-table-tfoot td,
+  .doc-table-tfoot .doc-table-td {
+    background-color: #F1F5F9 !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+    border: 1px solid #94A3B8 !important;
   }
 
   .doc-secondary-text,
@@ -918,13 +954,6 @@ aside .text-slate-400, aside .text-slate-500 {
   .doc-meta,
   .doc-footer {
     color: #333333 !important;
-  }
-
-  .doc-table-th {
-    background-color: #0A2540 !important;
-    color: #FFFFFF !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
 
   .doc-border {
@@ -1136,11 +1165,108 @@ aside .text-slate-400, aside .text-slate-500 {
 
   .document-theme-custom table th,
   .document-theme-custom .doc-table-th {
-    background-color: #1E40AF !important;
-    color: #FFFFFF !important;
+    background-color: #F8FAFC !important;
+    color: #000000 !important;
+    border: 1px solid #94A3B8 !important;
+    box-shadow: none !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+}
+
+/* ==========================================================================
+   OFFICIAL PDF EXPORT MODE (Pristine White Background, Black Text, No Shadows)
+   Ensures HTML2Canvas captures a crisp, professional accounting document
+   without any dark headers, black bars, shadows, or gradients.
+   ========================================================================== */
+.pdf-exporting-official,
+.pdf-exporting-official #printable-document-canvas,
+.pdf-exporting-official .doc-canvas {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.pdf-exporting-official *,
+.pdf-exporting-official *::before,
+.pdf-exporting-official *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+.pdf-exporting-official .doc-table,
+.pdf-exporting-official table {
+  background-color: #FFFFFF !important;
+  border-collapse: collapse !important;
+  border: 1px solid #94A3B8 !important;
+  box-shadow: none !important;
+  width: 100% !important;
+}
+
+.pdf-exporting-official .doc-table-th,
+.pdf-exporting-official table th,
+.pdf-exporting-official th {
+  background-color: #F8FAFC !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  border: 1px solid #94A3B8 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.pdf-exporting-official .doc-table-th *,
+.pdf-exporting-official table th *,
+.pdf-exporting-official th * {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+.pdf-exporting-official .doc-table-td,
+.pdf-exporting-official table td,
+.pdf-exporting-official td {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border: 1px solid #CBD5E1 !important;
+  box-shadow: none !important;
+}
+
+.pdf-exporting-official .doc-table-td *,
+.pdf-exporting-official table td *,
+.pdf-exporting-official td * {
+  color: #000000 !important;
+}
+
+.pdf-exporting-official .doc-table-tr-alt td,
+.pdf-exporting-official .doc-table-tr-alt .doc-table-td {
+  background-color: #F8FAFC !important;
+}
+
+.pdf-exporting-official .doc-table-tfoot td,
+.pdf-exporting-official .doc-table-tfoot .doc-table-td {
+  background-color: #F1F5F9 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  border: 1px solid #94A3B8 !important;
+}
+
+.pdf-exporting-official .doc-card-bg {
+  background-color: #F8FAFC !important;
+  border: 1px solid #CBD5E1 !important;
+  box-shadow: none !important;
+}
+
+.pdf-exporting-official .doc-title,
+.pdf-exporting-official .doc-company-title,
+.pdf-exporting-official .doc-number {
+  color: #000000 !important;
+}
+
+.pdf-exporting-official .doc-secondary-text,
+.pdf-exporting-official .doc-date,
+.pdf-exporting-official .doc-meta {
+  color: #334155 !important;
 }
 
 /* ==========================================================================

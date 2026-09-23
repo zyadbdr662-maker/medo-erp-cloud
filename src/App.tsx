@@ -80,6 +80,7 @@ import { AdminPortalSecurityService } from "./services/adminPortalSecurityServic
 import { UnauthorizedAccessView } from "./components/UnauthorizedAccessView";
 import { RolesAndPermissionsManagementView } from "./components/RolesAndPermissionsManagementView";
 import { RoleSwitchingToolbar } from "./components/RoleSwitchingToolbar";
+import { MohasibDataMigrationWizard } from "./components/MohasibDataMigrationWizard";
 import {
   Account,
   BankAccountItem,
@@ -2976,6 +2977,7 @@ export default function App() {
                   onSaveInvoice={handleSaveInvoice}
                   onPrintDocument={handleOpenPrintDoc}
                   onShareDocument={handleOpenShareDoc}
+                  onOpenMohasibMigration={() => setActiveTab("DATA_MIGRATION")}
                 />
               )}
               {activeTab === "CLIENT_EXCHANGE" && (
@@ -3005,6 +3007,7 @@ export default function App() {
                   onSaveInvoice={handleSaveInvoice}
                   onPrintDocument={handleOpenPrintDoc}
                   onShareDocument={handleOpenShareDoc}
+                  onOpenMohasibMigration={() => setActiveTab("DATA_MIGRATION")}
                 />
               )}
               {activeTab === "FINANCIAL_REPORTS" && (
@@ -3173,6 +3176,19 @@ export default function App() {
                   onUpdateSystemSettings={handleUpdateSystemSettings}
                   fullState={erpState}
                 />
+              )}
+              {activeTab === "DATA_MIGRATION" && (
+                <div className="py-2">
+                  <MohasibDataMigrationWizard
+                    erpState={erpState}
+                    onStateUpdate={(updated) => {
+                      setErpState(updated);
+                      saveERPState(updated);
+                    }}
+                    onNavigateToTab={(tab) => setActiveTab(tab as any)}
+                    onClose={() => setActiveTab("DASHBOARD")}
+                  />
+                </div>
               )}
               {activeTab === "INVENTORY" && (
                 <InventoryView
