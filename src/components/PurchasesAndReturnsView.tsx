@@ -773,7 +773,7 @@ export const PurchasesAndReturnsView: React.FC<PurchasesAndReturnsViewProps> = (
       </div>
 
       {/* Mobile Card List (Mobile-First UI) */}
-      <div className="block lg:hidden space-y-3">
+      <div className="block xl:hidden space-y-3">
         {filteredPurchases.length === 0 ? (
           <div className="p-8 text-center text-slate-500 bg-slate-900 rounded-2xl border border-slate-800">
             <Truck className="w-8 h-8 mx-auto mb-2 opacity-40" />
@@ -925,7 +925,7 @@ export const PurchasesAndReturnsView: React.FC<PurchasesAndReturnsViewProps> = (
       </div>
 
       {/* Main Table (Only on Large Screens) */}
-      <div className="hidden lg:block bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      <div className="hidden xl:block bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-right text-xs">
             <thead>

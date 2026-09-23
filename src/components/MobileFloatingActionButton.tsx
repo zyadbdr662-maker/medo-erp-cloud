@@ -44,7 +44,7 @@ export const MobileFloatingActionButton: React.FC<MobileFloatingActionButtonProp
   };
 
   return (
-    <div className="lg:hidden fixed bottom-6 left-6 z-40 flex flex-col items-end">
+    <div className="xl:hidden fixed bottom-6 left-6 z-40 flex flex-col items-end">
       {/* Speed Dial Options Menu */}
       {isOpen && (
         <div className="flex flex-col items-start gap-2.5 mb-3 animate-fadeIn">

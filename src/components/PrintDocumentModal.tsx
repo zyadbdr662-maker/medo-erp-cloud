@@ -11,6 +11,12 @@ import {
   Sun,
   Moon,
   FileText,
+  ArrowRight,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Table,
+  LayoutGrid,
 } from "lucide-react";
 import { CurrencyCode, CurrencyInfo, SystemSettings } from "../types/erp";
 import { formatMoney, formatNumberOnly } from "../services/erpStorage";
@@ -53,6 +59,41 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
   const [previewMode, setPreviewMode] = useState<"LIGHT" | "DARK">(isDarkMode ? "DARK" : "LIGHT");
   const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Zoom & Screen-Fit state for Android, Windows, and browsers
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [fitToScreen, setFitToScreen] = useState<boolean>(true);
+  const [mobileItemView, setMobileItemView] = useState<"AUTO" | "CARDS" | "TABLE">("AUTO");
+
+  // Android Hardware Back Button + Browser History + ESC Key Listener
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Push history entry so pressing Android back button or gesture closes the modal
+    try {
+      window.history.pushState({ modal: "print-invoice" }, "");
+    } catch (e) {
+      console.warn("History push warning:", e);
+    }
+
+    const handlePopState = () => {
+      onClose();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   // Electronic Signature state hooks
   const [sigType, setSigType] = useState<"NONE" | "TEXT" | "IMAGE">(
@@ -357,26 +398,121 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
       : "قيد محاسبي معتمد في نظام المحاسبة والإدارة المتكامل");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in overflow-y-auto print:bg-transparent print:p-0 print:static">
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-start p-1.5 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-md overflow-y-auto print:bg-transparent print:p-0 print:static print:block"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
-        className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl shadow-2xl p-4 sm:p-6 text-right animate-in zoom-in-95 my-4 sm:my-8 print:bg-transparent print:border-none print:shadow-none print:p-0 print:my-0 print:w-full print:max-w-none"
+        className="bg-slate-900 border border-slate-800/90 rounded-2xl sm:rounded-3xl w-full max-w-5xl shadow-2xl p-2.5 sm:p-6 text-right my-1 sm:my-4 print:bg-transparent print:border-none print:shadow-none print:p-0 print:my-0 print:w-full print:max-w-none relative flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ACTION TOOLBAR (Hidden in Print) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800 mb-6 print:hidden">
-          {/* Right: Title and Light/Dark Switcher */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-emerald-400" />
-              <span className="text-sm font-bold text-white">معاينة المستند الرسمي</span>
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3.5 border-b border-slate-800 mb-4 sm:mb-6 print:hidden">
+          {/* Right: Unmistakable Back Button + Document indicator */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/* PROMINENT BACK BUTTON (زر رجوع أساسي وسهل الوصول في رأس الصفحة) */}
+            <button
+              id="btn-modal-back-main"
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-rose-600 via-rose-700 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs sm:text-sm shadow-lg shadow-rose-950/50 border border-rose-400/50 active:scale-95 transition-all cursor-pointer group"
+              title="الرجوع إلى النظام وإغلاق الفاتورة (مفتاح Esc أو زر الرجوع بالهاتف)"
+            >
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-white rotate-180 group-hover:-translate-x-0.5 transition-transform" />
+              <span>الرجوع إلى النظام (إغلاق)</span>
+            </button>
+
+            {/* Document Indicator */}
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs text-slate-300">
+              <FileText className="w-4 h-4 text-emerald-400" />
+              <span className="font-bold text-white">{docTitle}</span>
+              <span className="text-slate-500">|</span>
+              <span className="font-mono text-amber-400 font-bold">{docNumber}</span>
+            </div>
+          </div>
+
+          {/* Center & Left: Screen Adapt & Actions */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {/* Screen Adapt / Auto Fit Toggle for Android, Windows, Tablets */}
+            <div className="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700 shadow-inner">
+              <button
+                type="button"
+                onClick={() => {
+                  setFitToScreen(!fitToScreen);
+                  if (!fitToScreen) setZoomLevel(100);
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  fitToScreen
+                    ? "bg-emerald-600 text-white shadow"
+                    : "text-slate-300 hover:text-white"
+                }`}
+                title="ملائمة عرض الفاتورة تلقائياً مع شاشة الهاتف والكمبيوتر والمتصفح"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">ملائمة الشاشة تلقائياً</span>
+                <span className="sm:hidden">ملائمة</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFitToScreen(false);
+                  setZoomLevel((prev) => Math.max(60, prev - 10));
+                }}
+                className="p-1 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 text-xs font-bold transition cursor-pointer"
+                title="تصغير (-)"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFitToScreen(false);
+                  setZoomLevel(100);
+                }}
+                className="text-[11px] font-mono text-amber-400 font-bold px-1.5 py-0.5 hover:bg-slate-700/50 rounded transition cursor-pointer select-none"
+                title="إعادة تعيين الحجم الطبيعي 100%"
+              >
+                {fitToScreen ? "متجاوب" : `${zoomLevel}%`}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFitToScreen(false);
+                  setZoomLevel((prev) => Math.min(150, prev + 10));
+                }}
+                className="p-1 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 text-xs font-bold transition cursor-pointer"
+                title="تكبير (+)"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
             </div>
 
-            {/* LIGHT / DARK MODE TOGGLE SWITCHER (Section 1 & 2 of user request) */}
+            {/* Mobile View Style Switcher: Cards vs Table */}
+            {documentType === "INVOICE" && documentData.items?.length > 0 && (
+              <div className="flex sm:hidden items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setMobileItemView(mobileItemView === "CARDS" ? "TABLE" : "CARDS")}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-purple-600/80 hover:bg-purple-500 text-white transition cursor-pointer"
+                  title="التبديل بين عرض الجدول وعرض بطاقات الجوال"
+                >
+                  {mobileItemView === "CARDS" ? <Table className="w-3 h-3" /> : <LayoutGrid className="w-3 h-3" />}
+                  <span>{mobileItemView === "CARDS" ? "عرض جدول" : "عرض بطاقات"}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Light / Dark Mode Toggle */}
             <div className="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700 shadow-inner">
               <button
                 type="button"
                 onClick={() => setPreviewMode("LIGHT")}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   isLight
                     ? "bg-white text-[#0A2540] shadow-md"
                     : "text-slate-400 hover:text-white"
@@ -384,13 +520,13 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                 title="معاينة المستند في الوضع المشرق (Light Mode)"
               >
                 <Sun className="w-3.5 h-3.5 text-amber-500" />
-                <span>الوضع المشرق (Light)</span>
+                <span className="hidden sm:inline">مشرق</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setPreviewMode("DARK")}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   !isLight
                     ? "bg-[#1A3A6A] text-white shadow-md"
                     : "text-slate-400 hover:text-white"
@@ -398,13 +534,13 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                 title="معاينة المستند في الوضع الليلي (Dark Mode)"
               >
                 <Moon className="w-3.5 h-3.5 text-cyan-300" />
-                <span>الوضع الليلي (Dark)</span>
+                <span className="hidden sm:inline">ليلي</span>
               </button>
             </div>
           </div>
 
-          {/* Left: Actions (Print, PDF, WhatsApp, SMS, Copy, Close) */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Left / Secondary Quick Actions */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {/* Direct WhatsApp Share */}
             <button
               onClick={handleDirectWhatsApp}
@@ -833,13 +969,22 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
         )}
 
         {/* ------------------------------------------------------------- */}
-        {/* DOCUMENT CANVAS CONTAINER (Light Mode / Dark Mode / Print)    */}
+        {/* DOCUMENT CANVAS CONTAINER (Responsive for Android, Windows, & Web) */}
         {/* ------------------------------------------------------------- */}
-        <div
-          id="printable-document-canvas"
-          className={`doc-canvas doc-font-cairo p-6 sm:p-8 rounded-2xl shadow-xl border transition-colors duration-200 space-y-6 print:p-0 print:border-none print:shadow-none relative overflow-hidden ${
-            isLight ? "doc-mode-light" : "doc-mode-dark"
-          } ${paperFormat === "THERMAL_80MM" ? "doc-paper-thermal" : ""}`}
+        <div className="w-full flex justify-center overflow-x-auto pb-2 sm:pb-4">
+          <div
+            className="w-full transition-all duration-200"
+            style={{
+              maxWidth: paperFormat === "THERMAL_80MM" ? "380px" : "900px",
+              transform: !fitToScreen && zoomLevel !== 100 ? `scale(${zoomLevel / 100})` : undefined,
+              transformOrigin: "top center",
+            }}
+          >
+            <div
+              id="printable-document-canvas"
+              className={`doc-canvas doc-font-cairo p-3.5 sm:p-6 md:p-8 rounded-2xl shadow-xl border transition-colors duration-200 space-y-4 sm:space-y-6 print:p-0 print:border-none print:shadow-none relative overflow-hidden w-full ${
+                isLight ? "doc-mode-light" : "doc-mode-dark"
+              } ${paperFormat === "THERMAL_80MM" ? "doc-paper-thermal" : ""}`}
           style={{
             backgroundColor: colors.canvasBg,
             color: colors.body,
@@ -854,34 +999,34 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
             </div>
           )}
 
-          {/* 1. Header with Dynamic Branch Branding */}
+          {/* 1. Header with Dynamic Branch Branding (Responsive across Android, Windows, and Browser) */}
           <div
-            className="flex items-start justify-between pb-4 border-b-2 gap-2"
+            className="flex flex-col sm:flex-row items-center sm:items-start justify-between pb-4 border-b-2 gap-3 text-center sm:text-right"
             style={{ borderColor: "#D4AF37" }}
           >
-            {/* Right Side: Arabic Header */}
-            <div className="space-y-1 text-right flex-1">
+            {/* Arabic Info */}
+            <div className="space-y-1 text-center sm:text-right flex-1 w-full sm:w-auto order-2 sm:order-1">
               <h1
-                className="doc-company-title font-extrabold text-base sm:text-lg"
+                className="doc-company-title font-extrabold text-base sm:text-lg lg:text-xl"
                 style={{ color: colors.title }}
               >
                 🏢 {headerCompanyAr}
               </h1>
               <div
-                className="doc-secondary-text text-[12px] font-bold"
+                className="doc-secondary-text text-xs sm:text-sm font-bold"
                 style={{ color: colors.secondary }}
               >
                 {headerSubtitleAr}
               </div>
               <div
-                className="doc-meta text-[11px]"
+                className="doc-meta text-[11px] sm:text-xs"
                 style={{ color: colors.secondary }}
               >
-                للتواصل: {headerPhone}
+                للتواصل: <span dir="ltr" className="font-mono">{headerPhone}</span>
               </div>
               {headerTaxReg && (
                 <div
-                  className="doc-meta text-[10px] font-mono"
+                  className="doc-meta text-[10px] sm:text-xs font-mono"
                   style={{ color: colors.secondary }}
                 >
                   {headerTaxReg}
@@ -890,7 +1035,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
             </div>
 
             {/* Middle: Dynamic Logo Display */}
-            <div className="flex-shrink-0 mx-2 sm:mx-4 flex flex-col items-center justify-center">
+            <div className="flex-shrink-0 mx-auto sm:mx-4 flex flex-col items-center justify-center order-1 sm:order-2 mb-1 sm:mb-0">
               {logoType === "CUSTOM_IMAGE" && logoImage ? (
                 <img
                   src={logoImage}
@@ -898,33 +1043,33 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                   className="max-h-16 max-w-[120px] object-contain"
                 />
               ) : logoType === "TEXT_BADGE" ? (
-                <div className="px-3 py-2 rounded-xl bg-[#0A2540] text-[#D4AF37] font-black text-xs border border-[#D4AF37] text-center shadow-md">
+                <div className="px-3 py-1.5 rounded-xl bg-[#0A2540] text-[#D4AF37] font-black text-xs border border-[#D4AF37] text-center shadow-md">
                   {headerCompanyAr.slice(0, 16)}
                 </div>
               ) : (
-                <div className="w-14 h-14 rounded-xl bg-[#0A2540] text-sap-secondary font-black flex flex-col items-center justify-center border-2 border-sap-secondary shadow-md">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-[#0A2540] text-[#D4AF37] font-black flex flex-col items-center justify-center border-2 border-[#D4AF37] shadow-md">
                   <span className="text-xs font-mono tracking-tighter">MDOtkBZ</span>
-                  <span className="text-[8px] text-sap-secondary/90">بن زياد</span>
+                  <span className="text-[8px] text-[#D4AF37]/90">بن زياد</span>
                 </div>
               )}
             </div>
 
-            {/* Left Side: English Header */}
-            <div className="text-left space-y-1 flex-1" dir="ltr">
+            {/* English Info */}
+            <div className="text-center sm:text-left space-y-0.5 flex-1 w-full sm:w-auto order-3" dir="ltr">
               <h2
-                className="font-extrabold text-[13px] sm:text-[14px]"
+                className="font-extrabold text-xs sm:text-sm"
                 style={{ color: colors.title }}
               >
                 {headerCompanyEn}
               </h2>
               <div
-                className="text-[11px] font-medium"
+                className="text-[10px] sm:text-[11px] font-medium"
                 style={{ color: colors.secondary }}
               >
                 {headerSubtitleEn}
               </div>
               <div
-                className="text-[11px]"
+                className="text-[10px] sm:text-[11px]"
                 style={{ color: colors.secondary }}
               >
                 {headerPhone}
@@ -932,9 +1077,9 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
             </div>
           </div>
 
-          {/* 2. Document Title & Reference Bar */}
+          {/* 2. Document Title & Reference Bar (Responsive) */}
           <div
-            className="p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 doc-card-bg"
+            className="p-3 sm:p-3.5 rounded-xl border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 doc-card-bg"
             style={{
               backgroundColor: colors.cardBg,
               borderColor: colors.border,
@@ -942,25 +1087,25 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
           >
             <div>
               <span
-                className="text-[12px] block doc-meta"
+                className="text-[11px] sm:text-[12px] block doc-meta"
                 style={{ color: colors.secondary }}
               >
                 نوع المستند:
               </span>
               <h2
-                className="doc-title mt-0.5"
+                className="doc-title text-sm sm:text-base font-black mt-0.5"
                 style={{ color: colors.title }}
               >
                 📄 {docTitle}
               </h2>
             </div>
 
-            <div className="text-left space-y-1" dir="ltr">
+            <div className="flex flex-wrap sm:flex-col items-center sm:items-end justify-between gap-1 sm:gap-1 text-xs" dir="ltr">
               <div
-                className="doc-number font-mono"
+                className="doc-number font-mono text-xs sm:text-sm font-bold"
                 style={{ color: colors.title }}
               >
-                Reference No: <b>{docNumber}</b>
+                Ref: <b>{docNumber}</b>
               </div>
               <div
                 className="doc-date text-right"
@@ -968,14 +1113,14 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                 title={docDualTooltip}
                 style={{ color: colors.secondary }}
               >
-                تاريخ الإصدار: <b>{docDate}</b>
+                الإصدار: <b>{docDate}</b>
               </div>
               <div
                 className="doc-date text-right"
                 dir="rtl"
                 style={{ color: colors.secondary }}
               >
-                تاريخ الطباعة: <b>{todayPrintDate}</b>
+                الطباعة: <b>{todayPrintDate}</b>
               </div>
             </div>
           </div>
@@ -1234,10 +1379,45 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                 </div>
               </div>
 
-              {/* Items Table */}
-              <div className="overflow-x-auto">
+              {/* Items Section: Mobile Cards View + Responsive Table */}
+              {/* Mobile Swipe Hint */}
+              <div className="sm:hidden text-center text-[11px] text-slate-400 py-1 flex items-center justify-center gap-1.5 print:hidden">
+                <span>👈 اسحب الجدول أفقياً لمشاهدة كافة الأعمدة 👉</span>
+              </div>
+
+              {/* Mobile Cards View (Visible on mobile when CARDS mode active, hidden in print) */}
+              {mobileItemView === "CARDS" && (
+                <div className="space-y-2.5 sm:hidden print:hidden">
+                  {documentData.items?.map((item: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-xl border doc-card-bg space-y-1.5 shadow-sm text-right"
+                      style={{
+                        backgroundColor: idx % 2 === 1 ? colors.tdAltBg : colors.cardBg,
+                        borderColor: colors.border,
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-bold text-xs" style={{ color: colors.title }}>
+                          #{idx + 1} {item.description || item.itemName}
+                        </span>
+                        <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                          {formatNumberOnly(item.total)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]" style={{ color: colors.secondary }}>
+                        <span>الكمية: <b>{item.quantity} {item.unit || ""}</b></span>
+                        <span>سعر الوحدة: <b>{formatNumberOnly(item.unitPrice)}</b></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Items Table (Official table: always used in print, and on screen when in TABLE or AUTO mode) */}
+              <div className={`overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 ${mobileItemView === "CARDS" ? "hidden sm:block print:block" : "block"}`}>
                 <table
-                  className="w-full border-collapse text-right doc-table"
+                  className="w-full border-collapse text-right doc-table min-w-[500px] sm:min-w-full"
                   style={{ borderColor: colors.border }}
                 >
                   <thead>
@@ -1665,6 +1845,53 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+        {/* BOTTOM CONVENIENCE TOOLBAR (Hidden in Print) */}
+        <div className="mt-4 sm:mt-6 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 print:hidden">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm border border-slate-700 active:scale-95 transition-all cursor-pointer shadow-md"
+            title="الرجوع إلى النظام وإغلاق الفاتورة"
+          >
+            <ArrowRight className="w-4 h-4 text-rose-400 rotate-180" />
+            <span>الرجوع إلى لوحة التحكم (إغلاق الفاتورة)</span>
+          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-md active:scale-95 transition-all cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>طباعة الفاتورة</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs sm:text-sm shadow-md active:scale-95 transition-all cursor-pointer"
+            >
+              <FileDown className="w-4 h-4" />
+              <span>تصدير PDF</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* FLOATING ACTION BACK BUTTON FOR MOBILE & DESKTOP (Always visible on screen even when scrolled deep) */}
+      <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-50 print:hidden flex items-center gap-2 animate-in slide-in-from-bottom-5">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs sm:text-sm shadow-[0_8px_30px_rgba(225,29,72,0.6)] border-2 border-rose-300 active:scale-95 transition-all cursor-pointer hover:scale-105"
+          title="الرجوع إلى النظام وإغلاق الفاتورة"
+        >
+          <ArrowRight className="w-4 h-4 text-white rotate-180" />
+          <span>زر رجوع</span>
+        </button>
       </div>
     </div>
   );

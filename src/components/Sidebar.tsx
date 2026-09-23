@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   Coins,
   Sparkles,
+  Shield,
   ShieldCheck,
   Cloud,
   ChevronLeft,
@@ -393,6 +394,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       section: "بوابة الإدارة العليا — الإجراءات السيادية للمبرمج والمصمم مالك البرنامج (الأستاذ بدر عايض محمد)",
     },
     {
+      id: "SECURITY_AND_ROLES",
+      labelAr: "🎭 إدارة الأدوار والصلاحيات",
+      labelEn: "Roles & Permissions Management",
+      icon: Shield,
+      badge: "RBAC 5 أدوار",
+      badgeColor: "bg-[#7d3c98]/40 text-purple-300 border border-purple-500/50 font-black",
+      section: "بوابة الإدارة العليا — الإجراءات السيادية للمبرمج والمصمم مالك البرنامج (الأستاذ بدر عايض محمد)",
+    },
+    {
       id: "SETTINGS",
       labelAr: "إعدادات المنشأة والحسابات العامة",
       labelEn: "Company & System Settings",
@@ -592,7 +602,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       {/* Mobile Drawer (Hidden Navigation Sidebar - Section 2.1) */}
       {isMobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex justify-start bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+        <div className="xl:hidden fixed inset-0 z-50 flex justify-start bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
           <div className="w-80 max-w-[85vw] h-full bg-[#081220] border-l border-[#1E3A8A]/40 flex flex-col shadow-2xl animate-slideRight">
             {/* Mobile Header with Brand & Close Button */}
             <div className="flex items-center justify-between px-4 py-4 border-b border-[#1E3A8A]/40 bg-[#0B192C]">
@@ -770,9 +780,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* Desktop Sidebar (Only visible on lg screens and up) */}
+      {/* Desktop Sidebar (Only visible on xl screens and up) */}
       <aside
-        className={`hidden lg:flex relative z-20 flex-col bg-[#081220] border-l border-[#1E3A8A]/40 transition-all duration-300 select-none shadow-2xl ${
+        className={`hidden xl:flex relative z-20 flex-col bg-[#081220] border-l border-[#1E3A8A]/40 transition-all duration-300 select-none shadow-2xl ${
           isCollapsed ? "w-20" : "w-72"
         }`}
       >

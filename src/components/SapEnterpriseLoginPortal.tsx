@@ -278,7 +278,8 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
   defaultShowSaaSOnboarding = false,
 }) => {
   // Navigation & Form Tabs
-  const [activeTab, setActiveTab] = useState<"CREDENTIALS" | "NEW_TRIAL">("CREDENTIALS");
+  const [activeTab, setActiveTab] = useState<"CREDENTIALS" | "NEW_TRIAL">("NEW_TRIAL");
+  const [viewMode, setViewMode] = useState<"REGISTER" | "LOGIN">("REGISTER");
   const [language, setLanguage] = useState<"AR" | "EN">("AR");
   const [showSaaSOnboarding, setShowSaaSOnboarding] = useState(defaultShowSaaSOnboarding);
   const [showEnvConfigMobile, setShowEnvConfigMobile] = useState(false);
@@ -368,6 +369,13 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
     TenantSecurityService.getAttemptsState(activeTenantSlug || "default", email || "user")
   );
 
+  // New Organization Registration State
+  const [companyName, setCompanyName] = useState("");
+  const [crOrTaxNumber, setCrOrTaxNumber] = useState("");
+  const [phone, setPhone] = useState("+967 ");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+
   // New Trial / Registration State
   const [registrantFullName, setRegistrantFullName] = useState("");
   const [registrantEmail, setRegistrantEmail] = useState("");
@@ -448,7 +456,7 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [selectedLegalPolicy, setSelectedLegalPolicy] = useState<LegalPolicyType>("TERMS");
   const [complianceReportOpen, setComplianceReportOpen] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(true);
 
   // Handle selecting a company from search
   const handleSelectCompanyFromSearch = (companyId: string, companyName: string) => {
@@ -861,6 +869,144 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
     }
   };
 
+  // 3.5. NEW ORGANIZATION REGISTRATION (إنشاء حساب المنشأة المباشر)
+  const handleCreateOrganizationAccount = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setError("");
+    setMessage("");
+
+    const cleanCompanyName = companyName.trim();
+    const cleanCrNumber = crOrTaxNumber.trim();
+    const cleanEmail = email.trim();
+    const cleanPhone = phone.trim();
+    const cleanPassword = password;
+    const cleanConfirm = passwordConfirm;
+
+    if (!cleanCompanyName) {
+      setError("يرجى إدخال اسم المنشأة أو الشركة.");
+      return;
+    }
+    if (!cleanCrNumber) {
+      setError("يرجى إدخال السجل التجاري أو الرقم الضريبي للمنشأة.");
+      return;
+    }
+    if (!cleanEmail || !cleanEmail.includes("@") || !cleanEmail.includes(".")) {
+      setError("يرجى كتابة بريد إلكتروني صحيح ومعتمد.");
+      return;
+    }
+    if (!cleanPhone || cleanPhone.length < 7) {
+      setError("يرجى إدخال رقم الجوال كاملاً.");
+      return;
+    }
+    if (!cleanPassword || cleanPassword.length < 4) {
+      setError("يرجى إدخال كلمة مرور مكونة من 4 خانات على الأقل.");
+      return;
+    }
+    if (cleanPassword !== cleanConfirm) {
+      setError("كلمة المرور وتأكيد كلمة المرور غير متطابقين.");
+      return;
+    }
+    if (!termsAccepted) {
+      setError("يرجى الموافقة على شروط الاستخدام وسياسة الخصوصية للمتابعة.");
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage("جاري إنشاء حساب المنشأة وتخصيص بيئة العمل السحابية المعزولة...");
+
+    try {
+      const tenantSlug =
+        cleanCompanyName
+          .toLowerCase()
+          .replace(/[^\w\u0621-\u064A]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 30) || `org-${Date.now().toString().slice(-5)}`;
+
+      const newTenant = {
+        id: tenantSlug,
+        name: cleanCompanyName,
+        companyNameAr: cleanCompanyName,
+        companyNameEn: cleanCompanyName,
+        crNumber: cleanCrNumber,
+        taxNumber: cleanCrNumber,
+        email: cleanEmail,
+        assignedAdminEmail: cleanEmail,
+        assignedAdminName: `مدير ${cleanCompanyName}`,
+        phone: cleanPhone,
+        status: "TRIAL",
+        city: "صنعاء",
+        industry: "تجارة وتوزيع",
+        createdAt: new Date().toISOString(),
+        roles: {
+          MANAGER: {
+            email: cleanEmail,
+            password: cleanPassword,
+            roleNameAr: "المدير العام والمالك",
+          },
+        },
+      };
+
+      // Initialize 48-hour trial & isolation
+      trialService.initialize48HourTrial(cleanCompanyName, cleanEmail);
+      TenantIsolationService.setActiveTenant(tenantSlug);
+
+      try {
+        localStorage.setItem("currentTenant", JSON.stringify(newTenant));
+        localStorage.setItem("companyName", cleanCompanyName);
+        localStorage.setItem("tenantName", cleanCompanyName);
+        localStorage.setItem("mdo_print_header_ar", cleanCompanyName);
+        localStorage.setItem("mdo_print_phone", cleanPhone);
+        localStorage.setItem("mdo_print_tax_reg", `س.ت: ${cleanCrNumber}`);
+        localStorage.setItem("medo_active_tenant_slug", tenantSlug);
+        localStorage.setItem("medo_erp_admin_mode", "true");
+        sessionStorage.setItem("medo_erp_auth", "true");
+      } catch (e) {
+        console.warn("Storage warning:", e);
+      }
+
+      const adminUser: ERPUser = {
+        id: `USR-${Date.now().toString().slice(-5)}`,
+        name: `مدير ${cleanCompanyName}`,
+        role: "SYSTEM_ADMIN",
+        branch: availableBranches[0]?.nameAr || "الفرع الرئيسي",
+        branchId: selectedBranchId || "BR-SANAA-MAIN",
+        avatar: cleanCompanyName.slice(0, 2).toUpperCase(),
+        status: "ACTIVE",
+        plan: "TRIAL",
+        email: cleanEmail,
+        phone: cleanPhone,
+        tenantId: tenantSlug,
+      };
+
+      SecurityAuditService.getInstance().registerSession(adminUser);
+      TenantSecurityService.recordSuccessfulLogin(
+        tenantSlug,
+        cleanCompanyName,
+        cleanEmail,
+        adminUser.name
+      );
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("tenant_registered", { detail: newTenant }));
+        window.dispatchEvent(new Event("storage"));
+      }
+
+      setMessage("✅ تم إنشاء حساب المنشأة بنجاح! جاري التوجيه إلى بيئة العمل...");
+      soundService.playSound("SUCCESS_CHIME");
+
+      setTimeout(() => {
+        onLoginSuccess(adminUser, selectedBranchId, {
+          clientId: tenantSlug,
+          clientName: cleanCompanyName,
+          warehouseId: "WH-01",
+        });
+      }, 600);
+    } catch (err: any) {
+      setError(err.message || "حدث خطأ أثناء إنشاء حساب المنشأة.");
+      setIsLoading(false);
+    }
+  };
+
   // 4. NEW TRIAL & USER REGISTRATION (SAP Cloud Trial 30 Days)
   const handleCreateTrial = () => {
     setError("");
@@ -1039,1272 +1185,436 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
         <div className="absolute -bottom-40 right-1/3 w-[36rem] h-[36rem] bg-gradient-to-br from-[#1E3A8A]/40 to-[#0A2540]/20 mix-blend-screen rounded-full filter blur-[140px]" /><div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.05] pointer-events-none" />
       </div>
 
-      {/* TOP SAP ENTERPRISE BAR */}
+      {/* TOP CLEAN ENTERPRISE BAR */}
       <header
         id="sap-portal-header"
-        className="login-header w-full bg-[#0a2540] backdrop-blur-xl border-b border-[#d4af37]/30 py-4 px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 z-20 shadow-xl"
+        className="login-header w-full bg-[#0a2540]/90 backdrop-blur-xl border-b border-[#d4af37]/30 py-3.5 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 z-20 shadow-lg"
       >
-        <div className="flex flex-col sm:flex-row items-center text-center sm:text-right gap-3.5">
-          <div className="flex items-center justify-center">
-            <BzmtLogo size="md" variant="monogram" />
-          </div>
+        <div className="flex items-center gap-3">
+          <BzmtLogo size="md" variant="monogram" />
           <div>
-            <div className="flex flex-col sm:flex-row items-center gap-2">
-              <span className="logo text-[28px] sm:text-[32px] md:text-[38px] lg:text-[48px] font-black text-white tracking-wide leading-tight">
+            <div className="flex items-center gap-2">
+              <span className="logo text-2xl sm:text-3xl font-black text-white tracking-wide">
                 MeDo ERP
               </span>
-              <span className="text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37] font-bold whitespace-nowrap">
-                SAP S/4HANA & B1 Edition
+              <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37] font-bold">
+                SAP Edition
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 font-normal mt-0.5">
-              بوابة الدخول المؤسسي الموحدة — ميدو تك للحلول السحابية المتقدمة
+            <p className="text-xs text-slate-300 font-normal">
+              بوابة سحابة الأعمال الموحدة — ميدو تك للحلول السحابية المتقدمة
             </p>
           </div>
         </div>
 
-        {/* Real-time system telemetry and quick navigation */}
-        <div className="flex items-center justify-center gap-2 sm:gap-3 text-xs flex-wrap w-full md:w-auto">
-          {onOpenCorporateSite && (
-            <button
-              id="sap-back-home-btn"
-              onClick={onOpenCorporateSite}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-[#d4af37] border border-[#d4af37]/40 transition cursor-pointer font-black shadow-sm hover:scale-[1.05] text-[12px]"
-            >
-              <ArrowRight className="w-4 h-4 rotate-180" />
-              <span>العودة إلى الرئيسية</span>
-            </button>
-          )}
-
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#06182a] border border-blue-900/60 text-slate-300 shadow-inner">
-            <Server className="w-3.5 h-3.5 text-[#d4af37]" />
-            <span>النظام: <strong className="text-[#d4af37] font-mono">PRD-01 (Online)</strong></span>
-            <span className="text-slate-600">|</span>
-            <span>الإصدار: <strong className="text-[#d4af37] font-mono">2026.09-LTS</strong></span>
-          </div>
-
-          {onOpenTrustCenter && (
-            <button
-              id="sap-portal-trust-btn"
-              onClick={onOpenTrustCenter}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#06182a] hover:bg-[#0c2b48] text-slate-200 border border-blue-900/80 transition cursor-pointer font-medium shadow-sm hover:scale-[1.02] text-[11px] sm:text-xs"
-              title="مركز الثقة والأمان السحابي"
-            >
-              <ShieldCheck className="w-4 h-4 text-[#d4af37]" />
-              <span className="whitespace-nowrap">مركز الثقة (Trust Center)</span>
-            </button>
-          )}
-
-          {/* Search for companies and names button has been moved to SecretAdminGatewayModal (Sovereign Higher Administration) */}
-
+        {/* Subtle Language Toggle */}
+        <div className="flex items-center border border-blue-900/80 rounded-xl overflow-hidden bg-[#06182a]">
           <button
-            id="sap-portal-compliance-btn"
-            onClick={() => setComplianceReportOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#06182a] hover:bg-amber-500/20 text-[#d4af37] border border-[#d4af37]/40 transition cursor-pointer font-bold shadow-sm hover:scale-[1.02] text-[11px] sm:text-xs"
-            title="فحص مطابقة معايير SAP الدولية"
+            type="button"
+            onClick={() => setLanguage("AR")}
+            className={`px-3 py-1 text-xs font-bold transition cursor-pointer ${
+              language === "AR" ? "bg-[#d4af37] text-[#0a2540]" : "text-slate-400 hover:text-white"
+            }`}
           >
-            <Award className="w-4 h-4 text-[#d4af37]" />
-            <span className="whitespace-nowrap">معايير SAP</span>
+            عربي
           </button>
-
-          {onOpenCorporateSite && (
-            <button
-              id="sap-portal-corporate-btn"
-              onClick={onOpenCorporateSite}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#06182a] hover:bg-[#0c2b48] text-amber-200 border border-[#d4af37]/40 transition cursor-pointer font-bold shadow-sm hover:scale-[1.02] text-[11px] sm:text-xs"
-              title="استعراض موديولات النظام وبوابة المنشأة"
-            >
-              <Briefcase className="w-4 h-4 text-[#d4af37]" />
-              <span className="whitespace-nowrap">الموقع التعريفي</span>
-            </button>
-          )}
-
-          {/* SaaS onboarding registration button has been moved to SecretAdminGatewayModal (Sovereign Higher Administration) */}
-
-          {/* Sovereign Analog Clock in Enterprise Login Portal */}
-          <div className="flex items-center gap-2 px-2 py-1 rounded-xl bg-[#06182a] border border-[#d4af37]/40 shadow-inner">
-            <AnalogClock size={30} showSeconds={true} />
-          </div>
-
-          <div className="flex items-center border border-blue-900/80 rounded-xl overflow-hidden bg-[#06182a]">
-            <button
-              onClick={() => setLanguage("AR")}
-              className={`px-2.5 sm:px-3 py-1 text-xs font-bold transition cursor-pointer ${
-                language === "AR" ? "bg-[#d4af37] text-[#0a2540]" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              عربي
-            </button>
-            <button
-              onClick={() => setLanguage("EN")}
-              className={`px-2.5 sm:px-3 py-1 text-xs font-bold transition cursor-pointer ${
-                language === "EN" ? "bg-[#d4af37] text-[#0a2540]" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              EN
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setLanguage("EN")}
+            className={`px-3 py-1 text-xs font-bold transition cursor-pointer ${
+              language === "EN" ? "bg-[#d4af37] text-[#0a2540]" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            EN
+          </button>
         </div>
       </header>
 
-      {/* MAIN CONTAINER */}
-      <main id="sap-portal-main" className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-center z-10">
-        {/* CASE 1: TENANT PORTAL (When opened with ?tenant=...) */}
-        {isCustomTenant ? (
-          <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#06182a]/95 to-[#0a2540]/95 border border-emerald-500/60 shadow-[0_10px_30px_rgba(16,185,129,0.15)] backdrop-blur-xl flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-300 font-bold shadow-inner shrink-0">
-                  <Building2 className="w-6 h-6 text-emerald-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-base sm:text-lg font-black text-white">
-                      {currentTenantObj?.companyNameAr || activeTenantDetails.nameAr}
-                    </span>
-                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 font-bold">
-                      بوابة منشأة معزولة ومستقلة
-                    </span>
-                    {currentTenantObj?.status === "PAID_ENTERPRISE" && (
-                      <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 font-bold">
-                        اشتراك مؤسسي معتمد (Enterprise)
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-300 font-normal mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
-                    {currentTenantObj?.city && <span>📍 المدينة: <strong className="text-white">{currentTenantObj.city}</strong></span>}
-                    {currentTenantObj?.crNumber && <span>س.ت: <strong className="text-amber-300 font-mono">{currentTenantObj.crNumber}</strong></span>}
-                    {currentTenantObj?.taxNumber && <span>الرقم الضريبي: <strong className="text-amber-300 font-mono">{currentTenantObj.taxNumber}</strong></span>}
-                    {currentTenantObj?.assignedAdminName && <span>المدير المسؤول: <strong className="text-white">{currentTenantObj.assignedAdminName}</strong></span>}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => {
-                    try {
-                      localStorage.clear();
-                      sessionStorage.clear();
-                    } catch (e) {}
-                    window.location.href = window.location.pathname;
-                  }}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md transition cursor-pointer hover:scale-105"
-                  title="الخروج من بوابة العميل والعودة إلى المنصة الرئيسية للمدير"
-                >
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>🔐 دخول المدير (المنصة الرئيسية)</span>
-                </button>
-                <span className="text-[11px] text-emerald-300 font-mono bg-[#030d17] px-3 py-1.5 rounded-xl border border-emerald-800/80 shadow-sm">
-                  Tenant: {activeTenantSlug}
-                </span>
-              </div>
+      {/* MAIN CONTAINER: SINGLE CLEAN REGISTRATION / LOGIN CARD */}
+      <main id="sap-portal-main" className="flex-1 w-full max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-center z-10 my-auto">
+        <div className="w-full bg-gradient-to-br from-[#06182a]/95 via-[#081f36]/95 to-[#040e18]/95 border border-[#d4af37]/30 rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl space-y-6">
+          
+          {/* Header of Card */}
+          <div className="text-center space-y-2 border-b border-slate-700/60 pb-5">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#d4af37] mb-1">
+              {viewMode === "REGISTER" ? (
+                <Building2 className="w-6 h-6 text-[#d4af37]" />
+              ) : (
+                <Lock className="w-6 h-6 text-[#d4af37]" />
+              )}
             </div>
-
-            {/* Quick 1-Click Role Login for this Company */}
-            {currentTenantObj?.roles && (
-              <div className="border-t border-slate-700/60 pt-3">
-                <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                  <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                    <UserCheck className="w-3.5 h-3.5 text-[#d4af37]" />
-                    <span>الدخول السريع بحسابات أدوار المنشأة (معاينة فورية):</span>
-                  </span>
-                  <span className="text-[11px] text-slate-400">كلمة المرور: 1234</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-                  {Object.entries(currentTenantObj.roles).map(([roleKey, roleVal]: [string, any]) => {
-                    const isSelected = email.toLowerCase() === roleVal.email.toLowerCase();
-                    return (
-                      <button
-                        key={roleKey}
-                        type="button"
-                        onClick={() => {
-                          setEmail(roleVal.email);
-                          setPassword(roleVal.password || "1234");
-                          setMessage(`تم تجهيز بيانات ${roleVal.roleNameAr || roleKey}. اضغط 'تسجيل الدخول' للدخول فوراً.`);
-                          soundService.playSound("SUCCESS_CHIME");
-                        }}
-                        className={`p-2.5 rounded-xl text-right transition border text-xs cursor-pointer flex flex-col gap-0.5 ${
-                          isSelected
-                            ? "bg-[#d4af37]/25 border-[#d4af37] text-white shadow-[0_0_15px_rgba(212,175,55,0.35)]"
-                            : "bg-[#06182a]/90 hover:bg-[#0c2b48] border-slate-700/70 text-slate-300"
-                        }`}
-                      >
-                        <span className="font-bold text-white truncate">{roleVal.roleNameAr?.split("(")[0]?.trim() || roleKey}</span>
-                        <span className="text-[10px] text-slate-400 font-mono truncate">{roleVal.email}</span>
-                        <span className="text-[9px] text-emerald-400 font-bold mt-0.5">
-                          {isSelected ? "✓ تم التحديد — جاهز" : "اضغط للمعاينة"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          /* CASE 2: NEUTRAL PUBLIC ENTERPRISE CLOUD LOGIN (When opened without tenant) */
-          <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#06182a]/95 via-[#081f36]/95 to-[#040e18]/95 border border-slate-700/60 shadow-[0_10px_30px_rgba(0,0,0,0.4)] backdrop-blur-xl flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 font-black text-xl shadow-inner shrink-0">
-                  <Building2 className="w-6 h-6 text-blue-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-base sm:text-lg font-black text-white">
-                      بوابة سحابة الأعمال الموحدة (MeDo Cloud ERP)
-                    </span>
-                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/30 font-bold">
-                      منظومة محاسبية وإدارية سحابية شاملة
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-300 font-normal mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <span>🏢 دخول موحد لكافة فروع وشركات المنظومة</span>
-                    <span>🔒 مشفر ومعتمد بمعايير الأمان المالي السحابي</span>
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowTenantSelectorModal(true);
-                    soundService.playSound("RADAR_SECURITY");
-                  }}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#0c2847] to-[#123963] hover:from-[#134173] hover:to-[#1a518e] border border-blue-500/60 text-blue-200 font-bold text-xs shadow-lg shadow-blue-900/30 transition cursor-pointer hover:scale-105"
-                  title="بوابة الدخول المشفر والمؤمن لمنشآت وعملاء المنظومة"
-                >
-                  <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                  <span>🔐 الدخول للمنشآت والعملاء (مشفر)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSaaSSecurityGate(true);
-                    soundService.playSound("RADAR_SECURITY");
-                  }}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-900/30 border border-emerald-500/40 transition cursor-pointer hover:scale-105"
-                  title="تفعيل التجربة المجانية المخصصة بعد تخطي جدار الأمان"
-                >
-                  <Sparkles className="w-4 h-4 text-emerald-300" />
-                  <span>➕ تجربة مجانية (مشفر)</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile/Tablet Quick System Config Toggle */}
-        <div className="lg:hidden w-full max-w-xl mx-auto mb-4">
-          <button
-            type="button"
-            onClick={() => setShowEnvConfigMobile(!showEnvConfigMobile)}
-            className="w-full py-2.5 px-4 rounded-2xl bg-[#0a1525]/90 border border-[#d4af37]/40 text-xs text-amber-200 font-bold flex items-center justify-between shadow-md hover:bg-[#10243d] transition cursor-pointer"
-          >
-            <div className="flex items-center gap-2 truncate">
-              <Database className="w-4 h-4 text-[#d4af37] shrink-0" />
-              <span className="truncate">بيئة النظام: [{currentClient.code}] — {availableBranches.find((b) => b.id === selectedBranchId)?.nameAr || "الفرع الرئيسي"}</span>
-            </div>
-            <div className="flex items-center gap-1 text-[11px] text-slate-300 shrink-0 mr-2">
-              <span>{showEnvConfigMobile ? "إخفاء الإعدادات" : "تغيير العميل/الفرع"}</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showEnvConfigMobile ? "rotate-180" : ""}`} />
-            </div>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* LEFT/RIGHT SIDEBAR: SAP CLIENT, BRANCH & WAREHOUSE CONFIG */}
-          <div className={`lg:col-span-4 bg-gradient-to-br from-[#0a1525]/80 to-[#040810]/90 backdrop-blur-3xl border border-[#d4af37]/30 rounded-3xl p-5 sm:p-6 shadow-[0_15px_40px_rgba(212,175,55,0.15)] space-y-5 order-2 lg:order-1 ${showEnvConfigMobile ? "block" : "hidden lg:block"}`}>
-            <div className="border-b border-slate-700/60 pb-3">
-              <div className="flex items-center gap-2 text-sap-secondary font-bold text-sm">
-                <Database className="w-4 h-4" />
-                <span>تهيئة بيئة الدخول (SAP System & Client)</span>
-              </div>
-              <p className="text-xs text-slate-300 mt-0.5 font-normal">
-                اختر شركة العميل، الفرع، والمستودع الافتراضي لجلسة العمل
-              </p>
-            </div>
-
-            {/* Client (Mandant) Selector */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
-                <span className="flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-[#d4af37]" />
-                  <span>الشركة / العميل (Client):</span>
-                </span>
-              </div>
-              <div className="relative">
-                <select
-                  id="sap-client-selector"
-                  value={selectedClientId}
-                  onChange={(e) => setSelectedClientId(e.target.value)}
-                  className="w-full bg-[#070d18] border border-slate-700/90 rounded-xl px-3.5 py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-sap-secondary transition appearance-none cursor-pointer"
-                >
-                  {allClients.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-[#070d18] text-white">
-                      [{c.code}] {c.nameAr} ({c.type})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-slate-400 px-1 pt-0.5">
-                <span>الكود: <strong className="text-amber-300 font-mono">{currentClient.code}</strong></span>
-              </div>
-              <p className="text-xs text-slate-300 bg-[#070d18]/70 p-3 rounded-xl border border-slate-800 leading-relaxed font-normal">
-                {currentClient.description}
-              </p>
-            </div>
-
-            {/* Branch Selector */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">الفرع التشغيلي (Branch):</label>
-              <div className="relative">
-                <select
-                  id="sap-branch-selector"
-                  value={selectedBranchId}
-                  onChange={(e) => {
-                    const newBranch = e.target.value;
-                    setSelectedBranchId(newBranch);
-                    const matchedWh = SAP_WAREHOUSES.find((w) => w.branchId === newBranch);
-                    if (matchedWh) setSelectedWarehouseId(matchedWh.id);
-                  }}
-                  className="w-full bg-[#070d18] border border-slate-700/90 rounded-xl px-3.5 py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-sap-secondary transition appearance-none cursor-pointer"
-                >
-                  {availableBranches.map((b) => (
-                    <option key={b.id} value={b.id} className="bg-[#070d18] text-white">
-                      {b.nameAr} ({b.code})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Warehouse Selector */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-                <span>المستودع الافتراضي (Default Warehouse):</span>
-                <Warehouse className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-              <div className="relative">
-                <select
-                  id="sap-warehouse-selector"
-                  value={selectedWarehouseId}
-                  onChange={(e) => setSelectedWarehouseId(e.target.value)}
-                  className="w-full bg-[#070d18] border border-slate-700/90 rounded-xl px-3.5 py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-sap-secondary transition appearance-none cursor-pointer"
-                >
-                  {filteredWarehouses.length > 0 ? (
-                    filteredWarehouses.map((w) => (
-                      <option key={w.id} value={w.id} className="bg-[#070d18] text-white">
-                        {w.nameAr} [{w.code}]
-                      </option>
-                    ))
-                  ) : (
-                    <option value="WH-01" className="bg-[#070d18] text-white">
-                      مستودع البضاعة الجاهزة والتوزيع الرئيسي (WH-01)
-                    </option>
-                  )}
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Security & Isolation Summary Card */}
-            <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-950/40 via-slate-900/60 to-slate-950/80 border border-emerald-800/40 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-sap-secondary">
-                <ShieldCheck className="w-4 h-4 text-[#d4af37]" />
-                <span>أمان الجلسة وعزل البيانات</span>
-              </div>
-              <ul className="text-xs text-slate-300 space-y-1.5 leading-normal list-disc list-inside pr-1 font-normal">
-                <li>عزل كامل لقواعد البيانات المحاسبية (Multi-Tenant Isolation).</li>
-                <li>تشفير البيانات أثناء النقل والتخزين بروتوكول TLS 1.3 / AES-256.</li>
-                <li>توثيق كامل للعمليات في سجل المراجعة القانوني (Audit Trail).</li>
-              </ul>
-            </div>
-
-            {/* System Info Footnote */}
-            <div className="pt-2 text-xs text-slate-400 flex items-center justify-between">
-              <span>قاعدة البيانات: <strong className="text-slate-300 font-mono">{currentClient.dbName}</strong></span>
-              <span className="text-[#d4af37] font-semibold flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                جاهز للاتصال
-              </span>
-            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-white">
+              {viewMode === "REGISTER" ? "تسجيل منشأة جديدة" : "تسجيل الدخول إلى منشأتك"}
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto">
+              {viewMode === "REGISTER"
+                ? "أنشئ حساب منشأتك السحابية وابدأ إدارة أعمالك ومعاملاتك المحاسبية بدقة وأمان"
+                : "أدخل بريدك الإلكتروني المؤسسي وكلمة المرور للوصول إلى بيئة عمل المنشأة"}
+            </p>
           </div>
 
-          {/* RIGHT/CENTER: INTERACTIVE AUTHENTICATION MODES */}
-          <div className="login-card dark-card lg:col-span-8 w-full max-w-[580px] lg:max-w-none mx-auto bg-gradient-to-tl from-[#0a2540]/95 via-[#0a1525]/98 to-[#040810]/98 backdrop-blur-3xl border border-[#d4af37]/40 rounded-[22px] sm:rounded-[26px] p-5 xs:p-[24px] sm:p-[30px] lg:p-[45px] shadow-[0_20px_50px_rgba(212,175,55,0.2),_inset_0_1px_1px_rgba(255,255,255,0.1)] space-y-[28px] sm:space-y-[30px] order-1 lg:order-2 box-border overflow-x-hidden">
-            {/* CARD TOP BRANDING - TENANT & CLIENTS PORTAL */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600/30 to-teal-500/20 border border-blue-500/50 flex items-center justify-center shadow-inner shrink-0 text-blue-400 font-black text-2xl">
-                  🏢
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[18px] sm:text-[20px] font-black text-white tracking-tight">
-                      🏢 MeDo ERP - بوابة المنشآت والعملاء
-                    </span>
-                    <span className="text-[11px] bg-blue-500/20 text-blue-300 font-bold px-2.5 py-0.5 rounded-full border border-blue-500/40">
-                      Tenant & Clients Portal
-                    </span>
-                  </div>
-                  <p className="text-[12px] sm:text-[13px] text-slate-300 font-normal mt-0.5 flex items-center gap-2 flex-wrap">
-                    <span>🔐 دخول آمن ومشفّر</span>
-                    <span className="text-slate-500">•</span>
-                    <span className="text-emerald-400 font-mono text-[11px]">AES-256 GCM + PBKDF2</span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 self-start sm:self-center">
-                <button
-                  type="button"
-                  onClick={() => setShowTenantAuditModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#06182a] hover:bg-[#0c2b48] border border-blue-900/80 text-[12px] text-blue-300 hover:text-white font-bold transition shadow-sm cursor-pointer"
-                  title="استعراض سجل التدقيق الأمني لعمليات الدخول"
-                >
-                  <FileText className="w-3.5 h-3.5 text-blue-400" />
-                  <span>📜 سجل التدقيق الأمني</span>
-                </button>
-              </div>
+          {/* Feedback alerts */}
+          {error && (
+            <div className="p-3.5 rounded-xl bg-rose-950/80 border border-rose-700/60 text-rose-200 text-xs sm:text-sm flex items-center gap-2.5 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{error}</span>
             </div>
-
-            {/* PROMINENT TABS: بيانات الدخول المؤسسية vs تفعيل منشأة جديدة */}
-            <div className="w-full grid grid-cols-2 p-1.5 bg-[#051322] border border-blue-900/80 rounded-2xl gap-2">
-              <button
-                id="sap-tab-credentials"
-                type="button"
-                onClick={() => setActiveTab("CREDENTIALS")}
-                className={`min-h-[48px] py-2.5 px-3 rounded-xl text-[14px] sm:text-[15px] font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                  activeTab === "CREDENTIALS"
-                    ? "bg-[#d4af37] text-[#0a2540] font-black shadow-md shadow-[0_4px_15px_rgba(212,175,55,0.35)]"
-                    : "text-slate-300 hover:text-white hover:bg-slate-800/60"
-                }`}
-              >
-                <Lock className="w-4 h-4 shrink-0" />
-                <span>🔐 دخول آمن</span>
-              </button>
-              <button
-                id="sap-tab-trial"
-                type="button"
-                onClick={() => setActiveTab("NEW_TRIAL")}
-                className={`min-h-[48px] py-2.5 px-3 rounded-xl text-[14px] sm:text-[15px] font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                  activeTab === "NEW_TRIAL"
-                    ? "bg-[#d4af37] text-[#0a2540] font-black shadow-md shadow-[0_4px_15px_rgba(212,175,55,0.35)]"
-                    : "text-slate-300 hover:text-white hover:bg-slate-800/60"
-                }`}
-              >
-                <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
-                <span>➕ تسجيل منشأة جديدة</span>
-              </button>
+          )}
+          {message && (
+            <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-700/60 text-emerald-200 text-xs sm:text-sm flex items-center gap-2.5 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-[#d4af37] shrink-0 animate-pulse" />
+              <span>{message}</span>
             </div>
+          )}
 
-            {/* ALERTS & FEEDBACK */}
-            {error && (
-              <div className="p-3.5 rounded-xl bg-rose-950/80 border border-rose-700/60 text-rose-200 text-sm flex items-center gap-2.5">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                <span>{error}</span>
+          {/* REGISTER MODE FORM */}
+          {viewMode === "REGISTER" ? (
+            <form onSubmit={handleCreateOrganizationAccount} className="space-y-4">
+              {/* Field 1: اسم المنشأة */}
+              <div className="space-y-1.5">
+                <label className="text-xs sm:text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-[#d4af37]" />
+                  <span>اسم المنشأة: *</span>
+                </label>
+                <input
+                  id="reg-company-name"
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="مثال: شركة النماء للتوكيلات والتجارة"
+                  className="w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/30 transition font-sans"
+                  required
+                />
               </div>
-            )}
-            {message && (
-              <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-700/60 text-emerald-200 text-sm flex items-center gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-[#d4af37] shrink-0 animate-pulse" />
-                <span>{message}</span>
+
+              {/* Field 2: السجل التجاري / الرقم الضريبي */}
+              <div className="space-y-1.5">
+                <label className="text-xs sm:text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#d4af37]" />
+                  <span>السجل التجاري / الرقم الضريبي: *</span>
+                </label>
+                <input
+                  id="reg-cr-number"
+                  type="text"
+                  value={crOrTaxNumber}
+                  onChange={(e) => setCrOrTaxNumber(e.target.value)}
+                  placeholder="مثال: 1010XXXXXX أو 300748291000003"
+                  className="w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/30 transition font-mono"
+                  required
+                />
               </div>
-            )}
 
-            {/* TAB CONTENT 1: STANDARD CORPORATE CREDENTIALS & SSO */}
-            {activeTab === "CREDENTIALS" && (
-              <form onSubmit={handleCredentialsSubmit} className="space-y-5 max-w-full mx-auto py-1">
-                <div className="text-center space-y-1 mb-2">
-                  <h3 className="login-title text-[26px] sm:text-[28px] md:text-[30px] font-black text-white leading-tight">
-                    تسجيل الدخول الآمن لمنشأتك
-                  </h3>
-                  <p className="login-subtitle text-[13px] sm:text-[14px] text-slate-300 leading-relaxed">
-                    أدخل بريدك الإلكتروني المؤسسي وكلمة المرور المشفرة للوصول إلى بيئة عمل المنشأة
-                  </p>
-                </div>
-
-                {/* Email / Username Field */}
-                <div className="space-y-2">
-                  <label className="text-[14px] font-semibold text-slate-200 flex items-center gap-2">
+              {/* Fields 3 & 4: البريد ورقم الجوال */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-semibold text-slate-200 flex items-center gap-2">
                     <Mail className="w-4 h-4 text-[#d4af37]" />
-                    <span>📧 البريد الإلكتروني:</span>
+                    <span>البريد الإلكتروني: *</span>
                   </label>
                   <input
-                    id="sap-login-email"
-                    type="text"
+                    id="reg-email"
+                    type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.com"
-                    autoComplete="off"
-                    className="input-field w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3.5 text-[16px] min-h-[52px] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/30 transition shadow-inner font-sans"
+                    className="w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/30 transition font-sans"
+                    dir="ltr"
                     required
                   />
                 </div>
 
-                {/* Password Field */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[14px] font-semibold text-slate-200">
-                    <span className="flex items-center gap-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-semibold text-slate-200 flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-[#d4af37]" />
+                    <span>رقم الجوال: *</span>
+                  </label>
+                  <input
+                    id="reg-phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+967 773 586 047"
+                    className="w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/30 transition font-sans"
+                    dir="ltr"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Fields 5 & 6: كلمة المرور وتأكيد كلمة المرور */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs sm:text-sm font-semibold text-slate-200">
+                    <span className="flex items-center gap-1.5">
                       <Lock className="w-4 h-4 text-[#d4af37]" />
-                      <span>🔒 كلمة المرور:</span>
+                      <span>كلمة المرور: *</span>
                     </span>
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="text-slate-400 hover:text-white text-[13px] sm:text-[14px] flex items-center gap-1 transition cursor-pointer"
+                      className="text-slate-400 hover:text-white text-xs flex items-center gap-1 cursor-pointer"
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-slate-400" />}
-                      <span>{showPassword ? "إخفاء" : "إظهار"}</span>
+                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                   <input
-                    id="sap-login-password"
+                    id="reg-password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    autoComplete="new-password"
-                    className="input-field w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3.5 text-[16px] min-h-[52px] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/30 transition shadow-inner font-mono"
+                    className="w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/30 transition font-mono"
                     required
                   />
-                  {password && (
-                    <div className="flex items-center gap-2 pt-1 text-xs">
-                      <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${passStrength.color} transition-all duration-300`}
-                          style={{ width: `${(passStrength.score / 5) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-slate-400 text-[12px]">قوة كلمة المرور: {passStrength.text}</span>
-                    </div>
-                  )}
                 </div>
 
-                {/* Optional 2FA Code Field */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between text-[13px] font-medium text-slate-300">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs sm:text-sm font-semibold text-slate-200">
                     <span className="flex items-center gap-1.5">
-                      <KeyRound className="w-4 h-4 text-blue-400" />
-                      <span>🔑 رمز المصادقة الثنائية (إن كان مفعّلاً):</span>
+                      <ShieldCheck className="w-4 h-4 text-[#d4af37]" />
+                      <span>تأكيد كلمة المرور: *</span>
                     </span>
                     <button
                       type="button"
-                      onClick={() => setShowTenant2FAInput(!showTenant2FAInput)}
-                      className="text-blue-400 hover:underline text-xs cursor-pointer font-bold"
+                      onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                      className="text-slate-400 hover:text-white text-xs flex items-center gap-1 cursor-pointer"
                     >
-                      {showTenant2FAInput ? "إخفاء حقل 2FA" : "إدخال رمز 2FA (اختياري)"}
+                      {showPasswordConfirm ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
                   </div>
-                  {showTenant2FAInput && (
-                    <input
-                      id="sap-login-2fa-input"
-                      type="text"
-                      maxLength={8}
-                      value={tenant2FACode}
-                      onChange={(e) => setTenant2FACode(e.target.value.replace(/[^0-9A-Za-z]/g, ""))}
-                      placeholder="______ (أدخل الرمز المكون من 6 أرقام)"
-                      className="input-field w-full bg-[#030d17] border border-blue-500/50 rounded-xl px-4 py-3 text-[16px] text-center tracking-widest text-amber-300 font-mono placeholder-slate-600 focus:outline-none focus:border-amber-400 shadow-inner"
-                    />
-                  )}
+                  <input
+                    id="reg-password-confirm"
+                    type={showPasswordConfirm ? "text" : "password"}
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/30 transition font-mono"
+                    required
+                  />
                 </div>
+              </div>
 
-                {/* Remember Me & Forgot Password */}
-                <div className="flex items-center justify-between text-[14px] pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-slate-300 select-none">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sap-primary focus:ring-0 focus:ring-offset-0"
-                    />
-                    <span>تذكرني (جلسة آمنة مشفرة)</span>
-                  </label>
+              {/* Terms Checkbox */}
+              <div className="pt-2">
+                <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-300 select-none">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-[#d4af37] focus:ring-0"
+                  />
+                  <span>
+                    أوافق على <button type="button" onClick={() => openLegalPolicy("TERMS")} className="text-[#d4af37] hover:underline font-bold">شروط الاستخدام</button> و <button type="button" onClick={() => openLegalPolicy("PRIVACY")} className="text-[#d4af37] hover:underline font-bold">سياسة الخصوصية</button> لاتفاقية MeDo ERP Cloud
+                  </span>
+                </label>
+              </div>
+
+              {/* Submit Button: إنشاء حساب المنشأة */}
+              <button
+                id="reg-submit-btn"
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 py-3 px-4 rounded-xl bg-[#d4af37] hover:bg-[#e2bd46] text-[#0a2540] font-black text-base shadow-[0_8px_25px_rgba(212,175,55,0.35)] hover:shadow-[0_12px_30px_rgba(212,175,55,0.45)] transform hover:-translate-y-0.5 active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin text-[#0a2540]" />
+                    <span>جاري إنشاء وتخصيص بيئة المنشأة...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 text-[#0a2540]" />
+                    <span>إنشاء حساب المنشأة</span>
+                  </>
+                )}
+              </button>
+
+              {/* Switch to Login Link (Directly below button before footer) */}
+              <div className="text-center pt-3 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode("LOGIN");
+                    setError("");
+                    setMessage("");
+                  }}
+                  className="text-xs sm:text-sm text-slate-300 hover:text-[#d4af37] font-semibold transition cursor-pointer"
+                >
+                  <span>لديك حساب بالفعل؟ </span>
+                  <span className="text-[#d4af37] font-bold underline mr-1">تسجيل الدخول</span>
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* LOGIN MODE FORM */
+            <form onSubmit={handleCredentialsSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs sm:text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-[#d4af37]" />
+                  <span>البريد الإلكتروني: *</span>
+                </label>
+                <input
+                  id="login-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@company.com"
+                  className="w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/30 transition font-sans"
+                  dir="ltr"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs sm:text-sm font-semibold text-slate-200">
+                  <span className="flex items-center gap-1.5">
+                    <Lock className="w-4 h-4 text-[#d4af37]" />
+                    <span>كلمة المرور: *</span>
+                  </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      setForgotPasswordEmail(email);
-                      setShowForgotPasswordModal(true);
-                      setForgotPasswordSubmitted(false);
-                    }}
-                    className="text-[#d4af37] hover:underline font-bold text-[14px] flex items-center gap-1 cursor-pointer"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-slate-400 hover:text-white text-xs flex items-center gap-1 cursor-pointer"
                   >
-                    <span>نسيت كلمة المرور؟</span>
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
-
-                {/* Spectacular Glowing Guest Login Button */}
-                <button
-                  type="button"
-                  onClick={handleGuestLogin}
-                  disabled={isLoading}
-                  className="w-full h-[55px] min-h-[55px] py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:via-teal-500 hover:to-cyan-500 active:scale-98 text-slate-950 font-black text-[18px] shadow-[0_8px_25px_rgba(16,185,129,0.35)] hover:shadow-[0_12px_32px_rgba(16,185,129,0.5)] transform hover:-translate-y-0.5 flex items-center justify-center gap-2.5 transition disabled:opacity-50 border border-emerald-400/30 cursor-pointer animate-pulse"
-                >
-                  <Sparkles className="w-5 h-5 text-slate-950 animate-bounce" />
-                  <span>⚡ الدخول التجريبي السريع كضيف (جولة حية)</span>
-                </button>
-
-                {/* Primary Submit Button */}
-                <button
-                  id="sap-submit-login-btn"
-                  type="submit"
-                  disabled={isLoading}
-                  className="btn-primary w-full h-[55px] min-h-[55px] py-3.5 px-4 rounded-xl bg-[#d4af37] hover:bg-[#e2bd46] active:bg-[#c59f2e] text-[#0a2540] font-black text-[18px] shadow-[0_8px_25px_rgba(212,175,55,0.4)] hover:shadow-[0_12px_32px_rgba(212,175,55,0.55)] transform hover:-translate-y-0.5 flex items-center justify-center gap-2.5 transition active:scale-98 disabled:opacity-50 border border-[#b8860b] cursor-pointer"
-                >
-                  {isLoading ? (
-                    <>
-                      <RefreshCw className="w-5 h-5 animate-spin text-[#0a2540]" />
-                      <span>جاري تشفير الجلسة والتحقق...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-xl">🚀</span>
-                      <span>دخول آمن إلى بوابة المنشأة</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Concise Security Badge in Single Line */}
-                <div className="flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl bg-[#04101d]/90 border border-emerald-500/40 text-emerald-300 text-[13px] font-bold text-center shadow-lg">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>🔒 محمي بتشفير AES-256 GCM</span>
-                </div>
-
-                {/* Clear Bright Divider */}
-                <div className="relative flex items-center justify-center my-8">
-                  <div className="flex-grow border-t border-slate-700/50"></div>
-                  <span className="flex-shrink mx-4 w-10 h-10 flex items-center justify-center rounded-full bg-[#d4af37] text-[#0a2540] font-black text-[16px] shadow-[0_0_15px_rgba(212,175,55,0.4)] border-2 border-[#b8860b]">
-                    أو
-                  </span>
-                  <div className="flex-grow border-t border-slate-700/50"></div>
-                </div>
-
-                {/* Google SSO Button */}
-                <button
-                  id="sap-google-sso-btn"
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  disabled={isLoading}
-                  className="w-full h-[52px] min-h-[52px] py-2.5 px-4 rounded-xl bg-[#06182a] hover:bg-[#0c2b48] text-slate-100 border border-blue-900/90 hover:border-[#d4af37]/60 font-bold text-[16px] sm:text-[17px] flex items-center justify-center gap-3 transition cursor-pointer shadow-md"
-                >
-                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                    <path
-                      fill="#EA4335"
-                      d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.4l3.7 2.9C6.5 7.4 9 5 12 5z"
-                    />
-                    <path
-                      fill="#4285F4"
-                      d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.6 14.7c-.2-.7-.4-1.5-.4-2.7s.2-2 .4-2.7L1.9 6.4C.7 8.8 0 10.8 0 12s.7 3.2 1.9 5.6l3.7-2.9z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.3L1.9 16c1.8 3.8 5.6 7 10.1 7z"
-                    />
-                  </svg>
-                  <span>الدخول بحساب Google</span>
-                </button>
-
-                {/* Concise Security Badge in Single Line */}
-                <div className="flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-[#04101d]/90 border border-[#d4af37]/30 text-slate-200 text-[14px] font-bold text-center shadow-lg">
-                  <Lock className="w-4 h-4 text-[#d4af37] shrink-0" />
-                  <span className="truncate">محمي بـ reCAPTCHA v3 + Firebase App Check</span>
-                </div>
-
-                {/* Legal Trust Notice */}
-                <div className="pt-4 text-center text-[14px] text-slate-300 space-y-3 select-none">
-                  <p className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2">
-                    <span className="text-slate-400">بتسجيل الدخول، أنت توافق على:</span>
-                    <button
-                      type="button"
-                      onClick={() => openLegalPolicy("TERMS")}
-                      className="text-[#d4af37] hover:underline font-bold flex items-center gap-1.5"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      شروط الاستخدام
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openLegalPolicy("PRIVACY")}
-                      className="text-[#d4af37] hover:underline font-bold flex items-center gap-1.5"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      سياسة الخصوصية
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openLegalPolicy("COOKIES")}
-                      className="text-[#d4af37] hover:underline font-bold flex items-center gap-1.5"
-                    >
-                      <Cookie className="w-3.5 h-3.5" />
-                      ملفات الارتباط
-                    </button>
-                  </p>
-                </div>
-              </form>
-            )}
-
-            {/* TAB CONTENT 2: NEW TRIAL & ONBOARDING */}
-            {activeTab === "NEW_TRIAL" && (
-              <div className="space-y-5 max-w-full mx-auto py-1">
-                <div className="text-center space-y-1 mb-2">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37] text-[13px] font-bold mb-1">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>تسجيل حساب وتفعيل ترخيص مجاني 30 يوماً</span>
-                  </div>
-                  <h3 className="login-title text-[26px] sm:text-[28px] md:text-[32px] font-black text-white leading-tight">
-                    تسجيل مستخدم وتفعيل منشأة سحابية جديدة
-                  </h3>
-                  <p className="login-subtitle text-[14px] sm:text-[15px] text-slate-300 leading-relaxed">
-                    أدخل بياناتك وبيانات منشأتك للتسجيل واجتياز الفحص الأمني للبدء الفوري
-                  </p>
-                </div>
-
-                {/* Interactive SaaS Wizard launcher */}
-                <button
-                  type="button"
-                  onClick={() => setShowSaaSOnboarding(true)}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-950/90 via-indigo-950/90 to-blue-950/90 border border-[#d4af37]/40 text-[#d4af37] hover:text-white text-[14px] font-bold flex items-center justify-center gap-2 transition hover:bg-[#0c2b48] shadow-md cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4 text-[#d4af37]" />
-                  <span>فتح معالج الإعداد التفاعلي السريع (SaaS Setup Wizard)</span>
-                </button>
-
-                <div className="space-y-4 pt-1">
-                  {/* Personal & Account Info */}
-                  <div className="space-y-2">
-                    <label className="text-[14px] font-semibold text-slate-200 flex items-center gap-2">
-                      <User className="w-4 h-4 text-[#d4af37]" />
-                      <span>الاسم الكامل للعميل / المستخدم: *</span>
-                    </label>
-                    <input
-                      id="registrant-fullname"
-                      type="text"
-                      value={registrantFullName}
-                      onChange={(e) => setRegistrantFullName(e.target.value)}
-                      placeholder="مثال: بدر عايض زياد"
-                      className="input-field w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3.5 text-[16px] min-h-[52px] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] transition font-sans"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[14px] font-semibold text-slate-200 flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-[#d4af37]" />
-                        <span>البريد الإلكتروني الرسمي: *</span>
-                      </label>
-                      <input
-                        id="registrant-email"
-                        type="email"
-                        value={registrantEmail}
-                        onChange={(e) => setRegistrantEmail(e.target.value)}
-                        placeholder="name@company.com"
-                        className="input-field w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3.5 text-[16px] min-h-[52px] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] transition dir-ltr text-right font-sans"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[14px] font-semibold text-slate-200 flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-[#d4af37]" />
-                        <span>رقم الهاتف / الجوال: *</span>
-                      </label>
-                      <input
-                        id="registrant-phone"
-                        type="tel"
-                        value={registrantPhone}
-                        onChange={(e) => setRegistrantPhone(e.target.value)}
-                        placeholder="+967 773586047"
-                        className="input-field w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3.5 text-[16px] min-h-[52px] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] transition dir-ltr text-right font-sans"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[14px] font-semibold text-slate-200 flex items-center gap-2">
-                        <Lock className="w-4 h-4 text-[#d4af37]" />
-                        <span>كلمة المرور للحساب:</span>
-                      </label>
-                      <input
-                        id="registrant-password"
-                        type="password"
-                        value={registrantPassword}
-                        onChange={(e) => setRegistrantPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="input-field w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3.5 text-[16px] min-h-[52px] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] transition font-mono"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[14px] font-semibold text-slate-200 flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-[#d4af37]" />
-                        <span>تأكيد كلمة المرور:</span>
-                      </label>
-                      <input
-                        id="registrant-password-confirm"
-                        type="password"
-                        value={registrantPasswordConfirm}
-                        onChange={(e) => setRegistrantPasswordConfirm(e.target.value)}
-                        placeholder="••••••••"
-                        className="input-field w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3.5 text-[16px] min-h-[52px] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] transition font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Company Info */}
-                  <div className="space-y-2 pt-1">
-                    <label className="text-[14px] font-semibold text-slate-200 flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-[#d4af37]" />
-                      <span>اسم المنشأة أو الشركة: *</span>
-                    </label>
-                    <input
-                      id="trial-company-name"
-                      type="text"
-                      value={trialCompanyName}
-                      onChange={(e) => setTrialCompanyName(e.target.value)}
-                      placeholder="مثال: شركة النماء للتوكيلات والتجارة"
-                      className="input-field w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3.5 text-[16px] min-h-[52px] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] transition font-sans"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[14px] font-semibold text-slate-200">قطاع الأعمال:</label>
-                      <select
-                        value={trialIndustry}
-                        onChange={(e) => setTrialIndustry(e.target.value)}
-                        className="w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3.5 text-[15px] text-white focus:outline-none focus:border-[#d4af37] transition appearance-none cursor-pointer min-h-[52px]"
-                      >
-                        <option value="تجارة وتوزيع وإلكترونيات">تجارة وتوزيع وإلكترونيات</option>
-                        <option value="تصنيع وتجميع وصناعات تحويلية">تصنيع وتجميع وصناعات تحويلية</option>
-                        <option value="خدمات ومقاولات واستشارات">خدمات ومقاولات واستشارات</option>
-                        <option value="استيراد وتصدير ومستودعات">استيراد وتصدير ومستودعات</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[14px] font-semibold text-slate-200">عملة القيد الأساسية:</label>
-                      <select
-                        value={trialCurrency}
-                        onChange={(e) => setTrialCurrency(e.target.value)}
-                        className="w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3.5 text-[15px] text-white focus:outline-none focus:border-[#d4af37] transition appearance-none cursor-pointer min-h-[52px]"
-                      >
-                        <option value="YER">ريال يمني (صنعاء / عدن)</option>
-                        <option value="SAR">ريال سعودي (SAR)</option>
-                        <option value="USD">دولار أمريكي (USD)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* ANTI-BOT CAPTCHA HUMAN VERIFICATION BOX */}
-                  <div className="p-3.5 rounded-xl bg-[#06182a] border border-amber-500/40 space-y-2">
-                    <div className="flex items-center justify-between text-[13px] font-bold text-amber-400">
-                      <div className="flex items-center gap-1.5">
-                        <Bot className="w-4 h-4 text-amber-400" />
-                        <span>فحص أمان المنظومة - أثبت أنك إنسان ولست روبوتًا:</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={refreshCaptcha}
-                        className="text-[12px] text-slate-300 hover:text-white flex items-center gap-1 underline cursor-pointer"
-                        title="تغيير السؤال"
-                      >
-                        <RefreshCw className="w-3 h-3" />
-                        <span>تحديث</span>
-                      </button>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="bg-[#030d17] px-4 py-2.5 rounded-lg border border-slate-700 text-[#d4af37] font-mono text-[16px] font-bold tracking-wider select-none shrink-0">
-                        {captchaNum1} + {captchaNum2} = ؟
-                      </div>
-                      <input
-                        id="captcha-answer-input"
-                        type="number"
-                        value={captchaAnswer}
-                        onChange={(e) => setCaptchaAnswer(e.target.value)}
-                        placeholder="أدخل الناتج..."
-                        className="input-field flex-1 bg-[#030d17] border border-slate-700 rounded-xl px-4 py-3 text-[16px] min-h-[48px] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] text-center font-bold"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Concise Security Badge in Single Line */}
-                  <div className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#04101d]/90 border border-emerald-500/30 text-slate-300 text-[13px] sm:text-[14px] font-medium text-center shadow-inner">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span className="truncate">🔒 محمي بـ Google reCAPTCHA v3 + Firebase App Check</span>
-                  </div>
-
-                  <label className="flex items-center gap-3 p-3.5 rounded-xl bg-[#06182a] border border-slate-800 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={trialWithSampleData}
-                      onChange={(e) => setTrialWithSampleData(e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sap-primary focus:ring-0 focus:ring-offset-0"
-                    />
-                    <div className="text-[14px]">
-                      <span className="font-bold text-slate-200">تحميل بيانات افتراضية متكاملة (Sample Data)</span>
-                      <p className="text-[12px] text-slate-400">
-                        يشمل فواتير تجريبية، دليل حسابات جاهز، أصناف مخزنية، وعملاء وموردين.
-                      </p>
-                    </div>
-                  </label>
-
-                  <label className="flex items-start gap-3 p-3.5 rounded-xl bg-[#06182a] border border-slate-800 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={termsAccepted}
-                      onChange={(e) => setTermsAccepted(e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sap-primary focus:ring-0 focus:ring-offset-0 mt-0.5"
-                    />
-                    <div className="text-[13px] sm:text-[14px] text-slate-300">
-                      <span>أوافق على <button type="button" onClick={() => openLegalPolicy("TRIAL_TERMS")} className="text-[#d4af37] hover:underline font-bold">شروط الاستخدام والترخيص الرسمية</button> و <button type="button" onClick={() => openLegalPolicy("PRIVACY")} className="text-[#d4af37] hover:underline font-bold">سياسة الخصوصية وسرية البيانات</button> لاتفاقية MeDo ERP Cloud.</span>
-                    </div>
-                  </label>
-
-                  <button
-                    id="sap-create-trial-btn"
-                    onClick={handleCreateTrial}
-                    disabled={isLoading}
-                    className="btn-primary w-full h-[55px] min-h-[55px] py-3.5 px-4 rounded-xl bg-[#d4af37] hover:bg-[#e2bd46] active:bg-[#c59f2e] text-[#0a2540] font-black text-[18px] shadow-[0_8px_25px_rgba(212,175,55,0.4)] hover:shadow-[0_12px_32px_rgba(212,175,55,0.55)] transform hover:-translate-y-0.5 flex items-center justify-center gap-2.5 transition active:scale-98 disabled:opacity-50 cursor-pointer border border-[#b8860b]"
-                  >
-                    {isLoading ? (
-                      <>
-                        <RefreshCw className="w-5 h-5 animate-spin text-[#0a2540]" />
-                        <span>جاري إنشاء وتوثيق الحساب...</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserCheck className="w-5 h-5 text-[#0a2540]" />
-                        <span>تسجيل الحساب وتفعيل بيئة العمل السحابية</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-[#06182a] border border-blue-900/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/30 transition font-mono"
+                  required
+                />
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* ============================================================== */}
-        {/* 🖼️ SYSTEM SHOWCASE GALLERY SECTION (معرض النظام - شاهد قوته قبل التجربة) */}
-        {/* ============================================================== */}
-        <div className="mt-12 sm:mt-16 w-full bg-gradient-to-b from-[#06182c]/90 via-[#071d36]/90 to-[#040e1b]/95 border-2 border-amber-400/40 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-8 relative overflow-hidden">
-          
-          {/* BACKGROUND GLOW */}
-          <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          {/* SECTION HEADER */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10 border-b border-slate-700/80 pb-6 text-center md:text-right">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 font-bold text-xs border border-amber-400/40 mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>شاهد النظام بأعينك قبل التسجيل (90 شاشة معتمدة ومطابقة لـ IFRS)</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center justify-center md:justify-start gap-2">
-                <span>🖼️ معرض النظام - شاهد قوته قبل التجربة</span>
-              </h2>
-              <p className="text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                استعرض شاشات حية ومباشرة من داخل بيئة MeDo Cloud ERP لكل حركة محاسبية، قيود اليومية، الفواتير الذكية، كشوفات الحسابات، وتقارير الذكاء الاصطناعي.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setShowcaseInitialItem(undefined);
-                setShowShowcaseModal(true);
-              }}
-              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-[#07182c] font-black text-sm shadow-xl shadow-amber-500/25 transition-all flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:scale-95 shrink-0"
-            >
-              <Eye className="w-4 h-4 text-[#07182c]" />
-              <span>استعراض جميع الشاشات (90 صورة حية)</span>
-              <ArrowRight className="w-4 h-4 text-[#07182c]" />
-            </button>
-          </div>
-
-          {/* 6 FEATURED SCREENSHOT THUMBNAIL CARDS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 relative z-10">
-            {[
-              {
-                id: 1,
-                title: "فاتورة مبيعات ذكية + ZATCA Phase 2",
-                category: "المبيعات ونقاط البيع",
-                badge: "QR متوافق 100%",
-                desc: "إصدار فواتير ضريبية فورية، تدقيق ائتمان العميل، واحتساب الضرائب والخصومات آلياً.",
-                icon: "🧾",
-              },
-              {
-                id: 11,
-                title: "أمر شراء وتوريد بضاعة للمخازن",
-                category: "المشتريات والموردين",
-                badge: "إسناد دفعات آلي",
-                desc: "دورة المشتريات المتكاملة من طلب الشراء إلى فحص الاستلام ومطابقة فاتورة المورد.",
-                icon: "📦",
-              },
-              {
-                id: 21,
-                title: "سند صرف وقبض متعدد العملات",
-                category: "الخزينة والبنوك",
-                badge: "فوارق عملة فورية",
-                desc: "إدارة الخزائن النقدية، المحافظ الإلكترونية، وبنك اليمن المتحد بحساب فوارق الصرف.",
-                icon: "💰",
-              },
-              {
-                id: 31,
-                title: "قيد محاسبي آلي بالذكاء الاصطناعي",
-                category: "الحسابات والقيود (GL)",
-                badge: "Gemini AI Engine",
-                desc: "تحويل الأوامر الصوتية والنصوص إلى قيود يومية مزدوجة متوازنة ومرحلة مباشرة للشجرة.",
-                icon: "🤖",
-              },
-              {
-                id: 41,
-                title: "ميزان المراجعة وقائمة الأرباح والخسائر",
-                category: "التقارير المالية وIFRS",
-                badge: "معايير دولية IFRS",
-                desc: "ميزانية عمومية، تدفقات نقدية، وقوائم مالية ختامية بضغطة زر مع مقارنات تاريخية.",
-                icon: "📊",
-              },
-              {
-                id: 71,
-                title: "شاشة نقاط البيع السريعة (POS)",
-                category: "نقاط البيع والمطاعم",
-                badge: "أوفلاين + طابعة حرارية",
-                desc: "واجهة لمسية فائقة السرعة للمتاجر ونقاط البيع مع دعم الباركود والعمل دون إنترنت.",
-                icon: "⚡",
-              }
-            ].map((card) => (
-              <div
-                key={card.id}
-                onClick={() => {
-                  setShowcaseInitialItem(card.id);
-                  setShowShowcaseModal(true);
-                }}
-                className="group bg-[#081f38]/90 hover:bg-[#0b294a] border border-slate-700/80 hover:border-amber-400/80 rounded-2xl p-4 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-amber-500/10 flex flex-col justify-between"
+              {/* Submit Button: دخول إلى بوابة المنشأة */}
+              <button
+                id="login-submit-btn"
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 py-3 px-4 rounded-xl bg-[#d4af37] hover:bg-[#e2bd46] text-[#0a2540] font-black text-base shadow-[0_8px_25px_rgba(212,175,55,0.35)] hover:shadow-[0_12px_30px_rgba(212,175,55,0.45)] transform hover:-translate-y-0.5 active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-2.5">
-                    <span className="text-xl">{card.icon}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold text-[10px] border border-amber-400/30">
-                      {card.badge}
-                    </span>
-                  </div>
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin text-[#0a2540]" />
+                    <span>جاري التحقق وتشفير الجلسة...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-5 h-5 text-[#0a2540]" />
+                    <span>دخول آمن إلى بوابة المنشأة</span>
+                  </>
+                )}
+              </button>
 
-                  {/* THUMBNAIL SNAPSHOT PREVIEW BOX */}
-                  <div className="h-24 w-full bg-[#030a14] rounded-xl p-2.5 border border-slate-800 mb-3 flex flex-col justify-between font-mono text-[9px] text-slate-400 group-hover:border-amber-400/50 transition">
-                    <div className="flex justify-between items-center border-b border-slate-800 pb-1">
-                      <span className="text-white font-bold truncate">{card.title}</span>
-                      <span className="text-emerald-400">#MD-LIVE</span>
-                    </div>
-                    <div className="flex justify-between text-slate-300">
-                      <span>الترحيل: مرحل ومعتمد</span>
-                      <span className="text-amber-300 font-bold">150,000 YER</span>
-                    </div>
-                    <div className="flex justify-between text-slate-500 text-[8px]">
-                      <span>التشفير: AES-256 GCM</span>
-                      <span className="text-blue-300">انقر للتكبير 🔍</span>
-                    </div>
-                  </div>
-
-                  <h4 className="font-bold text-white text-sm group-hover:text-amber-300 transition line-clamp-1 mb-1">
-                    {card.title}
-                  </h4>
-                  <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
-                    {card.desc}
-                  </p>
-                </div>
-
-                <div className="pt-3 mt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                  <span className="text-[11px] text-blue-300 font-bold">{card.category}</span>
-                  <span className="text-amber-400 font-bold flex items-center gap-1 group-hover:translate-x-[-3px] transition text-[11px]">
-                    <span>عرض الشاشة</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </span>
-                </div>
+              {/* Switch to Register Link */}
+              <div className="text-center pt-3 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode("REGISTER");
+                    setError("");
+                    setMessage("");
+                  }}
+                  className="text-xs sm:text-sm text-slate-300 hover:text-[#d4af37] font-semibold transition cursor-pointer"
+                >
+                  <span>ليس لديك حساب منشأة؟ </span>
+                  <span className="text-[#d4af37] font-bold underline mr-1">تسجيل منشأة جديدة</span>
+                </button>
               </div>
-            ))}
-          </div>
-
-          {/* BOTTOM QUICK STATS BAR */}
-          <div className="pt-4 border-t border-slate-700/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-300 relative z-10">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>جميع الشاشات مأخوذة من البيئة السحابية الحقيقية لمنظومة MeDo Cloud ERP</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-amber-300 font-bold">14 قسماً تخصصياً</span>
-              <span>•</span>
-              <span className="text-blue-300 font-bold">100% باللغة العربية والإنجليزية</span>
-            </div>
-          </div>
-
+            </form>
+          )}
         </div>
       </main>
 
-      {/* SAP ENTERPRISE COMPLIANCE & LEGAL FOOTER */}
+      {/* SIMPLE CLEAN FOOTER WITH SOVEREIGN & ESSENTIAL LINKS */}
       <footer
         id="sap-portal-footer"
-        className="w-full bg-[#09111C] border-t border-slate-800 py-6 px-4 sm:px-8 mt-auto z-20"
+        className="w-full bg-[#040912] border-t border-slate-800/80 py-4 px-4 sm:px-8 mt-auto z-20"
       >
-        <div className="max-w-7xl mx-auto space-y-4">
-          {/* Compliance & Standards Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-400 pb-4 border-b border-slate-800/80">
-            <div className="flex items-start gap-2.5">
-              <Scale className="w-4 h-4 text-sap-secondary shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-slate-200 block text-xs">المعايير المحاسبية الدولية:</strong>
-                <span className="text-[11px] text-slate-400">
-                  متوافق مع IFRS ومبدأ القيد المزدوج، وإشعارات الفوترة الضريبية الإلكترونية (ZATCA Stage 2).
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-slate-200 block text-xs">الأمان والخصوصية السحابية:</strong>
-                <span className="text-[11px] text-slate-400">
-                  تشفير بنكي AES-256 للبيانات المخزنة، وبروتوكول TLS 1.3 للنقل، مع إسناد مستمر على سحابة Google Cloud.
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2.5">
-              <Award className="w-4 h-4 text-sap-secondary shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-slate-200 block text-xs">شهادة المطابقة والاعتماد:</strong>
-                <span className="text-[11px] text-slate-400">
-                  فحص وتدقيق مستقل للامتثال لمعايير أنظمة تخطيط الموارد المؤسسية (ERP) المتقدمة.
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Legal Policy Links */}
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <button
-                type="button"
-                onClick={() => openLegalPolicy("TERMS")}
-                className="hover:text-sap-secondary transition flex items-center gap-1 cursor-pointer"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>شروط الاستخدام</span>
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => openLegalPolicy("PRIVACY")}
-                className="hover:text-emerald-400 transition flex items-center gap-1 cursor-pointer"
-              >
-                <Lock className="w-3.5 h-3.5 text-emerald-400" />
-                <span>سياسة الخصوصية</span>
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => openLegalPolicy("DISCLAIMER")}
-                className="hover:text-amber-400 transition flex items-center gap-1 cursor-pointer"
-              >
-                <Scale className="w-3.5 h-3.5 text-amber-400" />
-                <span>إخلاء المسؤولية</span>
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => openLegalPolicy("REFUND")}
-                className="hover:text-cyan-400 transition flex items-center gap-1 cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-                <span>سياسة الاسترداد</span>
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent("open_patent_certificate"))}
-                className="hover:text-[#d4af37] transition flex items-center gap-1 cursor-pointer font-bold"
-              >
-                <Award className="w-3.5 h-3.5 text-[#d4af37]" />
-                <span>شهادة الابتكار</span>
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => openLegalPolicy("COOKIES")}
-                className="hover:text-amber-300 transition flex items-center gap-1 cursor-pointer"
-              >
-                <Cookie className="w-3.5 h-3.5 text-amber-300" />
-                <span>ملفات الارتباط</span>
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => openLegalPolicy("DPA")}
-                className="hover:text-sap-secondary transition flex items-center gap-1 cursor-pointer"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>اتفاقية معالجة البيانات (DPA)</span>
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => openLegalPolicy("GTC")}
-                className="hover:text-sap-secondary transition flex items-center gap-1 cursor-pointer"
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>الشروط العامة (GTC)</span>
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => openLegalPolicy("EULA")}
-                className="hover:text-sap-secondary transition flex items-center gap-1 cursor-pointer"
-              >
-                <BadgeCheck className="w-3.5 h-3.5" />
-                <span>ترخيص (EULA)</span>
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => openLegalPolicy("SAP_MATRIX")}
-                className="text-sap-secondary hover:underline font-bold flex items-center gap-1 cursor-pointer"
-              >
-                <Award className="w-3.5 h-3.5" />
-                <span>مصفوفة مطابقة SAP</span>
-              </button>
-            </div>
-
-            <div className="text-[11px] text-slate-500 font-mono">
-              System: MEDO-PRD-01 | Release: 2026.09 | Build: SAP-B1-S4
-            </div>
-          </div>
-
-          {/* Bottom Copyright & Discreet Sovereign Admin Entry */}
-          <div className="text-center pt-2 text-xs text-slate-300 font-bold border-t border-slate-800/60 tracking-wide flex items-center justify-center gap-3 flex-wrap">
-            <span>جميع الحقوق محفوظة ©</span>
-            <span className="text-amber-300 font-sans">Bin Ziyad Group & MeDo Tech (BZMT)</span>
-            <span className="text-slate-600">|</span>
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+          
+          {/* Sovereign & Trust Links */}
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
             <button
               type="button"
               onClick={() => {
                 setSovereignInitialMode("RESTRICTED");
                 setShowSovereignPortal(true);
               }}
-              className="text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1 cursor-pointer text-[11px] opacity-70 hover:opacity-100"
+              className="hover:text-amber-400 transition-colors flex items-center gap-1.5 cursor-pointer font-bold text-[#d4af37]"
               title="بوابة التحقق السيادي للإدارة العليا"
             >
-              <Lock className="w-3 h-3" />
-              <span>الإدارة السيادية</span>
+              <Lock className="w-3.5 h-3.5 text-[#d4af37]" />
+              <span>بوابة الإدارة السيادية (Sovereign Admin)</span>
             </button>
+
+            <span className="text-slate-700">•</span>
+
+            {onOpenTrustCenter && (
+              <>
+                <button
+                  type="button"
+                  onClick={onOpenTrustCenter}
+                  className="hover:text-cyan-400 transition-colors flex items-center gap-1.5 cursor-pointer font-medium"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>مركز الثقة (Trust Center)</span>
+                </button>
+                <span className="text-slate-700">•</span>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setComplianceReportOpen(true)}
+              className="hover:text-emerald-400 transition-colors flex items-center gap-1.5 cursor-pointer font-medium"
+            >
+              <Award className="w-3.5 h-3.5 text-emerald-400" />
+              <span>معايير SAP</span>
+            </button>
+
+            <span className="text-slate-700">•</span>
+
+            {onOpenCorporateSite && (
+              <>
+                <button
+                  type="button"
+                  onClick={onOpenCorporateSite}
+                  className="hover:text-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer font-medium"
+                >
+                  <Briefcase className="w-3.5 h-3.5 text-amber-300" />
+                  <span>الموقع التعريفي</span>
+                </button>
+                <span className="text-slate-700">•</span>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() => openLegalPolicy("TERMS")}
+              className="hover:text-slate-200 transition cursor-pointer"
+            >
+              شروط الاستخدام
+            </button>
+
+            <span className="text-slate-700">•</span>
+
+            <button
+              type="button"
+              onClick={() => openLegalPolicy("PRIVACY")}
+              className="hover:text-slate-200 transition cursor-pointer"
+            >
+              سياسة الخصوصية
+            </button>
+          </div>
+
+          {/* Copyright */}
+          <div className="text-center text-[11px] text-slate-500 font-sans">
+            جميع الحقوق محفوظة © ${new Date().getFullYear()} Bin Ziyad Group & MeDo Tech (BZMT)
           </div>
         </div>
       </footer>

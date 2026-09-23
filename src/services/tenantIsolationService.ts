@@ -1045,7 +1045,7 @@ export class TenantIsolationService {
    * Checks if a navigation tab is allowed for the user's role
    */
   public static isTabAllowedForRole(role: string | undefined | null, tab: string): boolean {
-    if (tab === "LEGAL_DOCUMENTS") return true;
+    if (tab === "LEGAL_DOCUMENTS" || tab === "HOME_HUB" || tab === "MEDO_BROCHURE" || tab === "USER_MANUAL" || tab === "AI_ASSISTANT" || tab === "COLLABORATION") return true;
     if (!role) return false;
     const cleanRole = role.toUpperCase();
 

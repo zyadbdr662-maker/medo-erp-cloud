@@ -17,6 +17,7 @@ import {
   CurrencyInfo,
   FixedAsset,
   AssetMaintenanceRecord,
+  JournalEntry,
 } from "../types/erp";
 import { formatMoney, formatNumberOnly } from "../services/erpStorage";
 import { FixedAssetsModule } from "./FixedAssetsModule";
@@ -26,6 +27,7 @@ interface CostCentersAndAssetsViewProps {
   fixedAssets: FixedAsset[];
   currencies: CurrencyInfo[];
   displayCurrency: CurrencyCode;
+  journalEntries?: JournalEntry[];
   onAddCostCenter: (cc: CostCenter) => void;
   onAddFixedAsset: (asset: FixedAsset) => void;
   onUpdateFixedAsset?: (asset: FixedAsset) => void;
@@ -51,6 +53,7 @@ export const CostCentersAndAssetsView: React.FC<CostCentersAndAssetsViewProps> =
   fixedAssets,
   currencies,
   displayCurrency,
+  journalEntries = [],
   onAddCostCenter,
   onAddFixedAsset,
   onUpdateFixedAsset,
@@ -265,6 +268,7 @@ export const CostCentersAndAssetsView: React.FC<CostCentersAndAssetsViewProps> =
           costCenters={costCenters}
           currencies={currencies}
           displayCurrency={displayCurrency}
+          journalEntries={journalEntries}
           onAddFixedAsset={onAddFixedAsset}
           onUpdateFixedAsset={onUpdateFixedAsset}
           onDeleteFixedAsset={onDeleteFixedAsset}

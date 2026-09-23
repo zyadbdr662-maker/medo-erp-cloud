@@ -46,6 +46,30 @@ export const MobileDocumentDetailModal: React.FC<MobileDocumentDetailModalProps>
 }) => {
   const [copied, setCopied] = React.useState(false);
 
+  // Support Android Back Button and Escape Key
+  React.useEffect(() => {
+    if (!document) return;
+
+    try {
+      window.history.pushState({ modal: "mobile-detail" }, "");
+    } catch (e) {
+      console.warn("History push warning:", e);
+    }
+
+    const handlePopState = () => onClose();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [document, onClose]);
+
   if (!document) return null;
 
   const handleCopyNumber = (num: string) => {

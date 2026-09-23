@@ -73,24 +73,24 @@ export const RoleSwitchingToolbar: React.FC<RoleSwitchingToolbarProps> = ({
     <>
       {/* 1. TOP FLOATING ALERT BANNER (Shows when testing another role with active Manager session) */}
       {hasOriginalManagerSession && !isManagerCurrently && (
-        <div className="sticky top-0 z-50 bg-gradient-to-r from-[#06182a] via-[#0a2540] to-[#06182a] border-b-2 border-[#d4af37] text-white px-4 py-2.5 shadow-2xl flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm font-bold dir-rtl animate-in slide-in-from-top-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="relative flex h-3 w-3">
+        <div className="w-full sticky top-0 z-40 bg-gradient-to-r from-[#06182a] via-[#0a2540] to-[#06182a] border-b-2 border-[#d4af37] text-white px-3 sm:px-4 py-2 sm:py-2.5 shadow-2xl flex flex-wrap items-center justify-between gap-2 text-xs font-bold dir-rtl animate-in slide-in-from-top-3">
+          <div className="flex items-center gap-2 min-w-0 max-w-full">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-[#d4af37]"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#d4af37]"></span>
             </span>
-            <div className="truncate">
+            <div className="truncate text-[11px] sm:text-xs">
               <span className="text-amber-300">وضع تجربة الدور:</span>{" "}
               <span className="text-white font-black underline decoration-[#d4af37] underline-offset-4">
                 {getRoleTitleAr(currentRole)}
               </span>
-              <span className="text-slate-400 text-xs hidden md:inline mr-2">
+              <span className="text-slate-400 text-[10px] sm:text-xs hidden md:inline mr-2">
                 ({effectiveCompanyName})
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               id="top-switch-back-to-manager-btn"
               type="button"
@@ -98,11 +98,11 @@ export const RoleSwitchingToolbar: React.FC<RoleSwitchingToolbarProps> = ({
                 soundService.playSound("SUCCESS_CHIME");
                 onSwitchBackToManager();
               }}
-              className="px-3.5 py-1.5 bg-gradient-to-r from-[#d4af37] to-[#f1c40f] hover:brightness-110 text-[#0a2540] font-black rounded-xl shadow-lg border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer text-xs active:scale-95"
+              className="px-3 py-1.5 bg-gradient-to-r from-[#d4af37] to-[#f1c40f] hover:brightness-110 text-[#0a2540] font-black rounded-xl shadow-lg border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer text-[11px] sm:text-xs active:scale-95"
               title="العودة المباشرة إلى حساب المدير العام واستعادة كامل الصلاحيات"
             >
-              <RotateCcw className="w-4 h-4 text-[#0a2540] animate-spin-slow" />
-              <span>العودة إلى وضع المدير (Switch Back to Admin)</span>
+              <RotateCcw className="w-3.5 h-3.5 text-[#0a2540] animate-spin-slow" />
+              <span>العودة لوضع المدير 👑</span>
             </button>
 
             <button
@@ -110,26 +110,26 @@ export const RoleSwitchingToolbar: React.FC<RoleSwitchingToolbarProps> = ({
                 soundService.playSound("ROYAL_BANK_CHIME");
                 onLogout();
               }}
-              className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-600 text-rose-200 hover:text-white rounded-xl border border-rose-500/40 transition-all flex items-center gap-1 text-xs cursor-pointer font-bold"
+              className="px-2.5 py-1.5 bg-rose-500/20 hover:bg-rose-600 text-rose-200 hover:text-white rounded-xl border border-rose-500/40 transition-all flex items-center gap-1 text-[11px] sm:text-xs cursor-pointer font-bold"
               title="تسجيل الخروج والعودة لشاشة الدخول"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">خروج</span>
+              <span>خروج</span>
             </button>
           </div>
         </div>
       )}
 
       {/* 2. FLOATING BOTTOM TOOLBAR (Fixed Toolbar for Navigation & Role Switching) */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 dir-rtl max-w-full px-2">
-        <div className="bg-[#06182a]/95 text-white border border-[#d4af37]/70 shadow-[0_10px_30px_rgba(0,0,0,0.8)] rounded-2xl px-4 py-2.5 backdrop-blur-xl flex items-center justify-center gap-2 sm:gap-4 text-xs font-bold ring-1 ring-white/10">
+      <div className="fixed bottom-20 lg:bottom-4 left-1/2 -translate-x-1/2 z-40 dir-rtl max-w-[95vw] px-2">
+        <div className="bg-[#06182a]/95 text-white border border-[#d4af37]/70 shadow-[0_10px_30px_rgba(0,0,0,0.8)] rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 backdrop-blur-xl flex items-center justify-center gap-2 sm:gap-4 text-xs font-bold ring-1 ring-white/10">
           {/* Home Button */}
           <button
             onClick={() => {
               soundService.playSound("SUCCESS_CHIME");
               setActiveTab(isManagerCurrently ? "DASHBOARD" : "SALES_RETURNS");
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
               activeTab === "DASHBOARD" || activeTab === "SALES_RETURNS"
                 ? "bg-[#d4af37] text-[#0a2540] font-black shadow-md"
                 : "hover:bg-slate-800/80 text-slate-200"
@@ -147,11 +147,11 @@ export const RoleSwitchingToolbar: React.FC<RoleSwitchingToolbarProps> = ({
                 soundService.playSound("SUCCESS_CHIME");
                 onSwitchBackToManager();
               }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-[#d4af37] to-[#f39c12] hover:brightness-110 text-[#0a2540] font-black rounded-xl shadow-lg border border-amber-300 transition-all cursor-pointer animate-pulse"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#d4af37] to-[#f39c12] hover:brightness-110 text-[#0a2540] font-black rounded-xl shadow-lg border border-amber-300 transition-all cursor-pointer animate-pulse"
               title="العودة إلى وضع المدير العام"
             >
               <RotateCcw className="w-4 h-4 text-[#0a2540]" />
-              <span>العودة لوضع المدير 👑</span>
+              <span>العودة للمدير 👑</span>
             </button>
           ) : (
             <button
@@ -171,10 +171,10 @@ export const RoleSwitchingToolbar: React.FC<RoleSwitchingToolbarProps> = ({
           <button
             onClick={() => {
               soundService.playSound("SUCCESS_CHIME");
-              setActiveTab("SYSTEM_SETTINGS");
+              setActiveTab("SETTINGS");
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-              activeTab === "SYSTEM_SETTINGS"
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+              activeTab === "SETTINGS"
                 ? "bg-[#d4af37] text-[#0a2540] font-black shadow-md"
                 : "hover:bg-slate-800/80 text-slate-200"
             }`}
@@ -192,7 +192,7 @@ export const RoleSwitchingToolbar: React.FC<RoleSwitchingToolbarProps> = ({
               soundService.playSound("ROYAL_BANK_CHIME");
               onLogout();
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 rounded-xl transition-all cursor-pointer font-bold"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 rounded-xl transition-all cursor-pointer font-bold"
             title="تسجيل الخروج والعودة لبوابة الدخول"
           >
             <LogOut className="w-4 h-4" />

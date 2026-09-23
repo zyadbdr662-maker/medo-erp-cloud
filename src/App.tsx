@@ -78,6 +78,7 @@ import { trialOperationsService } from "./services/trialOperationsService";
 import { SecretAdminGatewayModal } from "./components/SecretAdminGatewayModal";
 import { AdminPortalSecurityService } from "./services/adminPortalSecurityService";
 import { UnauthorizedAccessView } from "./components/UnauthorizedAccessView";
+import { RolesAndPermissionsManagementView } from "./components/RolesAndPermissionsManagementView";
 import { RoleSwitchingToolbar } from "./components/RoleSwitchingToolbar";
 import {
   Account,
@@ -142,8 +143,28 @@ import { findTenantById } from "./data/preGeneratedTenants";
 
 const repository: ERPRepository = new PostgresRepository();
 
+export const getRoleLabel = (role?: string | null): string => {
+  if (!role) return "المدير العام";
+  const r = role.toUpperCase();
+  const labels: Record<string, string> = {
+    MANAGER: "المدير العام",
+    SYSTEM_ADMIN: "المدير العام (إدارة عليا)",
+    ADMIN: "مدير النظام",
+    SUPER_ADMIN: "المدير التنفيذي العام",
+    ACCOUNTANT: "المحاسب المالي العام",
+    CASHIER: "مسؤول المبيعات ونقاط البيع (الكاشير)",
+    SALES: "مسؤول المبيعات",
+    DATA_ENTRY: "مسؤول المشتريات والمخازن",
+    PURCHASER: "مسؤول المشتريات والمخازن",
+    AUDITOR: "المراجع والمدقق المالي",
+    PARTNER: "الشريك المالي",
+  };
+  return labels[r] || role;
+};
+
 export default function App() {
   const [erpState, setErpState] = useState<ERPState | null>(null);
+  const [isRoleSwitching, setIsRoleSwitching] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<NavTab | "HOME_HUB">(() => {
     return typeof window !== "undefined" && window.innerWidth < 1024 ? "HOME_HUB" : "DASHBOARD";
   });
@@ -516,6 +537,15 @@ export default function App() {
 
   // Handler to Return Back to Manager Mode
   const handleSwitchBackToManager = useCallback(() => {
+    const currentTenant = TenantIsolationService.resolveActiveTenant() || "binziyad";
+    const tenantName = TenantIsolationService.getTenantName(currentTenant) || "بن زياد";
+    console.log('🎯 Switching role to: MANAGER');
+    console.log('📋 Current page / active tab:', activeTab);
+    console.log('🏢 Tenant:', currentTenant, `(${tenantName})`);
+    console.log('🎯 Redirecting to: DASHBOARD');
+
+    setIsRoleSwitching(true);
+
     let mgrSessionRaw = sessionStorage.getItem("medo_original_manager_session") || localStorage.getItem("medo_original_manager_session");
     let mgrSession: any = null;
     if (mgrSessionRaw) {
@@ -549,7 +579,7 @@ export default function App() {
 
     setActiveTab("DASHBOARD");
 
-    const tenant = mgrSession?.tenantSlug || TenantIsolationService.resolveActiveTenant() || "binziyad";
+    const tenant = mgrSession?.tenantSlug || currentTenant;
     const token = mgrSession?.token || "AUTH_MGR_AUTO";
     const newUrl = `${window.location.pathname}?tenant=${tenant}&role=MANAGER&token=${token}&path=/employee/manager`;
     window.history.pushState({}, "", newUrl);
@@ -557,7 +587,8 @@ export default function App() {
     setRefreshSuccessMessage("👑 تم العودة بنجاح إلى وضع المدير العام واستعادة كامل الصلاحيات الإدارية والمالية!");
     soundService.playSound("ROYAL_BANK_CHIME");
     setTimeout(() => setRefreshSuccessMessage(null), 5000);
-  }, []);
+    setTimeout(() => setIsRoleSwitching(false), 200);
+  }, [activeTab]);
 
   // Handler to Switch to Test Role safely
   const handleSwitchRole = useCallback((targetRole: "MANAGER" | "ACCOUNTANT" | "PURCHASER" | "CASHIER" | "AUDITOR") => {
@@ -566,11 +597,19 @@ export default function App() {
       return;
     }
 
+    const currentTenant = TenantIsolationService.resolveActiveTenant() || "binziyad";
+    const tenantName = TenantIsolationService.getTenantName(currentTenant) || "بن زياد";
+    console.log('🎯 Switching role to:', targetRole);
+    console.log('📋 Current page / active tab:', activeTab);
+    console.log('🏢 Tenant:', currentTenant, `(${tenantName})`);
+
+    setIsRoleSwitching(true);
+
     if (erpState?.currentUser?.role === "SYSTEM_ADMIN" || erpState?.currentUser?.role === "ADMIN") {
       const mgrSession = {
         isManager: true,
         managerName: erpState.currentUser.name || "أ. بدر عايض محمد (المدير العام)",
-        tenantSlug: TenantIsolationService.resolveActiveTenant() || "binziyad",
+        tenantSlug: currentTenant,
         token: "AUTH_MGR_AUTO",
         timestamp: Date.now()
       };
@@ -606,6 +645,8 @@ export default function App() {
       roleTitleAr = "المراجع والمدقق المالي";
     }
 
+    console.log('🎯 Redirecting to:', startTab);
+
     const newEmpUser: ERPUser = {
       id: `EMP-${targetRole}-${Date.now().toString().slice(-4)}`,
       name: empName,
@@ -631,14 +672,47 @@ export default function App() {
 
     setActiveTab(startTab);
 
-    const tenant = TenantIsolationService.resolveActiveTenant() || "binziyad";
-    const newUrl = `${window.location.pathname}?tenant=${tenant}&role=${targetRole}&token=AUTH_${targetRole}_AUTO&path=/employee/${targetRole.toLowerCase()}`;
+    const newUrl = `${window.location.pathname}?tenant=${currentTenant}&role=${targetRole}&token=AUTH_${targetRole}_AUTO&path=/employee/${targetRole.toLowerCase()}`;
     window.history.pushState({}, "", newUrl);
     
     setRefreshSuccessMessage(`🔄 تم التبديل التجريبي الفوري والآمن إلى دور (${roleTitleAr}). يمكنك العودة لوضع المدير العام في أي وقت!`);
     soundService.playSound("SUCCESS_CHIME");
     setTimeout(() => setRefreshSuccessMessage(null), 5000);
-  }, [erpState?.currentUser, handleSwitchBackToManager]);
+    setTimeout(() => setIsRoleSwitching(false), 200);
+  }, [erpState?.currentUser, handleSwitchBackToManager, activeTab]);
+
+  // 🔄 Role Change & Tenant Sync Observer
+  useEffect(() => {
+    const currentRole = erpState?.currentUser?.role || "SYSTEM_ADMIN";
+    const currentTenant = TenantIsolationService.resolveActiveTenant() || "binziyad";
+    const tenantName = TenantIsolationService.getTenantName(currentTenant) || "بن زياد";
+    
+    console.log(`🔄 Role changed to: ${currentRole} (${getRoleLabel(currentRole)})`);
+    console.log(`🏢 Tenant: ${currentTenant} (${tenantName})`);
+    console.log(`📋 Current View Tab: ${activeTab}`);
+  }, [erpState?.currentUser?.role]);
+
+  // 🛡️ Auto-route Guard when role changes
+  useEffect(() => {
+    const role = erpState?.currentUser?.role;
+    if (!role) return;
+
+    if (!TenantIsolationService.isTabAllowedForRole(role, activeTab)) {
+      const defaultTabs: Record<string, NavTab> = {
+        SYSTEM_ADMIN: "DASHBOARD",
+        ADMIN: "DASHBOARD",
+        MANAGER: "DASHBOARD",
+        ACCOUNTANT: "GENERAL_LEDGER",
+        CASHIER: "SALES_RETURNS",
+        DATA_ENTRY: "PURCHASES_RETURNS",
+        PURCHASER: "PURCHASES_RETURNS",
+        AUDITOR: "FINANCIAL_REPORTS",
+      };
+      const fallbackTab = defaultTabs[role] || "DASHBOARD";
+      console.log(`🛡️ [Role Guard] activeTab (${activeTab}) not allowed for role (${role}). Redirecting to: ${fallbackTab}`);
+      setActiveTab(fallbackTab);
+    }
+  }, [erpState?.currentUser?.role, activeTab]);
 
   // ⚡ Priority #1: Central Auth & Token Access Verification Hook (Executes before module load)
   useEffect(() => {
@@ -2419,6 +2493,18 @@ export default function App() {
           />
 
           <div className="flex-1 flex flex-col min-w-0">
+            {/* Global Role Switching Toolbar & Top Floating Bar */}
+            <RoleSwitchingToolbar
+              currentUser={erpState.currentUser}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              onLogout={handleLogout}
+              onSwitchBackToManager={handleSwitchBackToManager}
+              onSwitchRole={handleSwitchRole}
+              hasOriginalManagerSession={hasOriginalManagerSession}
+              companyName={erpState.systemSettings?.companyNameAr}
+            />
+
             {/* Original License Activation Banner */}
             {activatedLicenseBanner && (
               <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-emerald-950 border-b-2 border-blue-500 px-4 py-3 text-xs text-blue-100 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl animate-fadeIn z-40">
@@ -2632,8 +2718,28 @@ export default function App() {
               );
             })()}
 
-            <main key={`${erpState?.currentUser?.role || ""}-${activeTab}`} className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-              {erpState.currentUser?.plan === "TRIAL" && (trialService.getTrialState()?.isExpired ?? false) && ["DASHBOARD", "INTEGRATED_ERP", "SAAS_PLATFORM", "SCHEDULED_BACKUP", "CLOUD_SYNC", "TRUST_CENTER", "SETTINGS", "THEME_STUDIO"].includes(activeTab) ? (
+            <main key={`${erpState?.currentUser?.role || "MANAGER"}-${TenantIsolationService.resolveActiveTenant() || "binziyad"}-${activeTab}`} className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+              {isRoleSwitching ? (
+                <div className="flex flex-col items-center justify-center min-h-[55vh] space-y-5 text-center animate-fadeIn" dir="rtl">
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#0a2540] to-blue-900 border-2 border-[#d4af37] flex items-center justify-center shadow-2xl animate-pulse">
+                      <span className="text-3xl">🔄</span>
+                    </div>
+                    <div className="absolute -inset-1 rounded-2xl bg-[#d4af37]/30 blur-md animate-ping opacity-60 pointer-events-none" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h3 className="text-xl font-black text-white">
+                      جاري تحميل واجهة {getRoleLabel(erpState?.currentUser?.role)}...
+                    </h3>
+                    <p className="text-xs text-slate-400 font-mono">
+                      تهيئة الصلاحيات ووحدات العمل المحاسبية المعتمدة
+                    </p>
+                  </div>
+                  <div className="w-44 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="w-full h-full bg-gradient-to-r from-[#d4af37] to-amber-400 animate-pulse rounded-full" />
+                  </div>
+                </div>
+              ) : erpState.currentUser?.plan === "TRIAL" && (trialService.getTrialState()?.isExpired ?? false) && ["DASHBOARD", "INTEGRATED_ERP", "SAAS_PLATFORM", "SCHEDULED_BACKUP", "CLOUD_SYNC", "TRUST_CENTER", "SETTINGS", "THEME_STUDIO"].includes(activeTab) ? (
                 <div className="flex flex-col items-center justify-center h-[60vh] space-y-6 text-center animate-fade-in">
                   <div className="w-24 h-24 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
                     <Lock className="w-12 h-12 text-rose-500" />
@@ -2665,9 +2771,15 @@ export default function App() {
                     sessionStorage.removeItem("medo_erp_auth");
                     setIsAuthenticated(false);
                   }}
+                  onSwitchBackToManager={handleSwitchBackToManager}
                 />
               ) : (
-                <Suspense fallback={null}>
+                <Suspense fallback={
+                  <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center animate-fadeIn">
+                    <div className="w-10 h-10 rounded-xl border-3 border-[#d4af37] border-t-transparent animate-spin mb-3" />
+                    <p className="text-xs font-bold text-slate-300">جاري تحميل الوحدة المحاسبية...</p>
+                  </div>
+                }>
                   <>
                     {activeTab === "HOME_HUB" && (
                 <MobileHomeHub
@@ -2944,6 +3056,7 @@ export default function App() {
                   costCenters={erpState.costCenters}
                   currencies={erpState.currencies}
                   displayCurrency={selectedCurrency}
+                  journalEntries={erpState.journalEntries}
                   onAddFixedAsset={handleAddFixedAsset}
                   onUpdateFixedAsset={handleUpdateFixedAsset}
                   onDeleteFixedAsset={handleDeleteFixedAsset}
@@ -2960,6 +3073,7 @@ export default function App() {
                   fixedAssets={erpState.fixedAssets}
                   currencies={erpState.currencies}
                   displayCurrency={selectedCurrency}
+                  journalEntries={erpState.journalEntries}
                   onAddCostCenter={handleAddCostCenter}
                   onAddFixedAsset={handleAddFixedAsset}
                   onUpdateFixedAsset={handleUpdateFixedAsset}
@@ -3014,6 +3128,14 @@ export default function App() {
                   currencies={erpState.currencies}
                   onUpdateExchangeRate={handleUpdateExchangeRate}
                   onExecuteForexRevaluation={handleExecuteForexRevaluation}
+                />
+              )}
+              {activeTab === "SECURITY_AND_ROLES" && (
+                <RolesAndPermissionsManagementView
+                  currentUser={erpState.currentUser}
+                  onSwitchRole={handleSwitchRole}
+                  onSwitchBackToManager={handleSwitchBackToManager}
+                  onNavigateToTab={setActiveTab}
                 />
               )}
               {activeTab === "SETTINGS" && (
@@ -3505,18 +3627,6 @@ export default function App() {
             }}
           />
 
-          {/* Global Role Switching Toolbar & Top Floating Bar */}
-          <RoleSwitchingToolbar
-            currentUser={erpState.currentUser}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            onLogout={handleLogout}
-            onSwitchBackToManager={handleSwitchBackToManager}
-            onSwitchRole={handleSwitchRole}
-            hasOriginalManagerSession={hasOriginalManagerSession}
-            companyName={erpState.systemSettings?.companyNameAr}
-          />
-
           {/* Global Universal Search Engine Modal (200+ Tenants & Users Index) */}
           <SapUniversalSearchModal
             isOpen={isUniversalSearchOpen}
@@ -3587,7 +3697,7 @@ export default function App() {
           </button>
           
           {/* Mobile Bottom Navigation */}
-          <div className="lg:hidden">
+          <div className="xl:hidden">
             <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout} />
           </div>
         </>

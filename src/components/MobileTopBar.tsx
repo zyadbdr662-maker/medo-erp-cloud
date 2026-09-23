@@ -143,7 +143,7 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
   const currentInfo = getModuleDisplayInfo();
 
   return (
-    <div data-mobile-top-bar="true" className="mobile-top-bar lg:hidden sticky top-0 z-40 bg-[#0B192C] backdrop-blur-md border-b border-[#1E3A8A]/50 shadow-md">
+    <div data-mobile-top-bar="true" className="mobile-top-bar xl:hidden sticky top-0 z-40 bg-[#0B192C] backdrop-blur-md border-b border-[#1E3A8A]/50 shadow-md">
       {/* Safe Area Top Padding for notch devices */}
       <div className="px-3.5 py-2.5 flex items-center justify-between gap-2.5">
         {/* Right Section in RTL: Back Button OR Menu Toggle + Logo */}

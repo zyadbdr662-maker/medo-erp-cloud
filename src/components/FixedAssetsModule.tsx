@@ -30,6 +30,7 @@ import {
   Building,
   UserCheck,
   Check,
+  BarChart3,
 } from "lucide-react";
 import {
   FixedAsset,
@@ -38,15 +39,18 @@ import {
   CurrencyInfo,
   AssetMaintenanceRecord,
   AssetTransferRecord,
+  JournalEntry,
 } from "../types/erp";
 import { formatMoney, formatNumberOnly } from "../services/erpStorage";
 import { AssetUsefulLifeTimeline } from "./AssetUsefulLifeTimeline";
+import { AssetMonthlyPerformanceReport } from "./AssetMonthlyPerformanceReport";
 
 interface FixedAssetsModuleProps {
   fixedAssets: FixedAsset[];
   costCenters: CostCenter[];
   currencies: CurrencyInfo[];
   displayCurrency: CurrencyCode;
+  journalEntries?: JournalEntry[];
   onAddFixedAsset: (asset: FixedAsset) => void;
   onUpdateFixedAsset?: (asset: FixedAsset) => void;
   onDeleteFixedAsset?: (assetId: string) => void;
@@ -69,6 +73,7 @@ interface FixedAssetsModuleProps {
 
 type TabType =
   | "REGISTER"
+  | "MONTHLY_PERFORMANCE_REPORT"
   | "LIFECYCLE"
   | "DEPRECIATION_ENGINE"
   | "COST_CENTERS_ALLOCATION"
@@ -79,6 +84,7 @@ export const FixedAssetsModule: React.FC<FixedAssetsModuleProps> = ({
   costCenters,
   currencies,
   displayCurrency,
+  journalEntries = [],
   onAddFixedAsset,
   onUpdateFixedAsset,
   onDeleteFixedAsset,
@@ -454,6 +460,16 @@ export const FixedAssetsModule: React.FC<FixedAssetsModuleProps> = ({
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2.5">
             <button
+              id="btn-monthly-performance-report"
+              onClick={() => setActiveTab("MONTHLY_PERFORMANCE_REPORT")}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-900/80 to-cyan-900/80 hover:from-blue-800 hover:to-cyan-800 text-cyan-200 text-xs font-bold border border-cyan-500/40 transition-all cursor-pointer shadow-md"
+              title="عرض تقرير ورسم بياني تفاعلي للأداء الشهري والإهلاك المتوقع والمسجل"
+            >
+              <BarChart3 className="w-4 h-4 text-cyan-400" />
+              <span>تقرير الأداء الشهري (Recharts)</span>
+            </button>
+
+            <button
               id="btn-print-assets-register"
               onClick={() => setShowPrintRegisterModal(true)}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 transition-all hover:text-white"
@@ -555,6 +571,18 @@ export const FixedAssetsModule: React.FC<FixedAssetsModuleProps> = ({
         >
           <Layers className="w-4 h-4" />
           <span>سجل الأصول الثابتة ({fixedAssets.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("MONTHLY_PERFORMANCE_REPORT")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === "MONTHLY_PERFORMANCE_REPORT"
+              ? "bg-gradient-to-r from-blue-600/30 to-emerald-600/30 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/40"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+          }`}
+        >
+          <BarChart3 className="w-4 h-4 text-cyan-400" />
+          <span>تقرير الأداء الشهري والإهلاك (Recharts 📊)</span>
         </button>
 
         <button
@@ -1413,6 +1441,19 @@ export const FixedAssetsModule: React.FC<FixedAssetsModuleProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 5. TAB CONTENT: MONTHLY PERFORMANCE REPORT */}
+      {activeTab === "MONTHLY_PERFORMANCE_REPORT" && (
+        <AssetMonthlyPerformanceReport
+          fixedAssets={fixedAssets}
+          costCenters={costCenters}
+          currencies={currencies}
+          displayCurrency={displayCurrency}
+          journalEntries={journalEntries}
+          onRunDepreciation={onRunDepreciation}
+          onViewAssetDetails={(asset) => setSelectedAssetForDetails(asset)}
+        />
       )}
 
       {/* ================= MODALS ================= */}

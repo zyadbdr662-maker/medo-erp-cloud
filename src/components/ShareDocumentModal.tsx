@@ -12,6 +12,7 @@ import {
   Sparkles,
   Smartphone,
   Info,
+  ArrowRight,
 } from "lucide-react";
 import { CurrencyCode, CurrencyInfo, Customer, Invoice, SystemSettings, Vendor, Voucher } from "../types/erp";
 import {
@@ -109,6 +110,30 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
 
     generateMessageText(activeChannel);
   }, [shareData, activeChannel, displayCurrency, systemSettings]);
+
+  // Support Android Back Button and Escape Key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    try {
+      window.history.pushState({ modal: "share-document" }, "");
+    } catch (e) {
+      console.warn("History push warning:", e);
+    }
+
+    const handlePopState = () => onClose();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen || !shareData) return null;
 
@@ -231,12 +256,23 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800/60 text-slate-400 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white font-bold text-xs shadow transition-all active:scale-95 border border-rose-400/40 cursor-pointer"
+              title="الرجوع وإغلاق النافذة (Esc)"
+            >
+              <ArrowRight className="w-4 h-4 rotate-180 text-white" />
+              <span>رجوع</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-slate-800/60 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              title="إغلاق"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Channel Switch Tabs */}

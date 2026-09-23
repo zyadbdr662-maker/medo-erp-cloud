@@ -194,7 +194,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      <header className="hidden lg:block sticky top-0 z-30 bg-[#0B192C] backdrop-blur-md border-b border-[#1E3A8A]/50 px-4 py-2.5 shadow-md">
+      <header className="hidden xl:block sticky top-0 z-30 bg-[#0B192C] backdrop-blur-md border-b border-[#1E3A8A]/50 px-4 py-2.5 shadow-md">
       <div className="flex items-center justify-between gap-4">
         {/* Left/Start side (in RTL: right side): Company Logo, Search & Multi-Currency Ticker */}
         <div className="flex items-center gap-3 flex-1 max-w-4xl">

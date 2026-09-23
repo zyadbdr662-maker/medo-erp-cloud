@@ -268,7 +268,7 @@ export const VouchersView: React.FC<VouchersViewProps> = ({
       </div>
 
       {/* Mobile Card List (Mobile-First UI) */}
-      <div className="block lg:hidden space-y-3">
+      <div className="block xl:hidden space-y-3">
         {filteredVouchers.length === 0 ? (
           <div className="py-12 text-center text-slate-400 font-medium bg-slate-900 border border-slate-700 rounded-2xl">
             لا توجد سندات مسجلة
@@ -376,7 +376,7 @@ export const VouchersView: React.FC<VouchersViewProps> = ({
       </div>
 
       {/* Vouchers Table (Desktop) */}
-      <div className="hidden lg:block bg-slate-900 border border-slate-700 rounded-2xl shadow-xl overflow-hidden">
+      <div className="hidden xl:block bg-slate-900 border border-slate-700 rounded-2xl shadow-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-right text-sm text-slate-200">
             <thead>
