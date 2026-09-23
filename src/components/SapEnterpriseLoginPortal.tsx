@@ -1232,6 +1232,48 @@ export const SapEnterpriseLoginPortal: React.FC<SapEnterpriseLoginPortalProps> =
 
       {/* MAIN CONTAINER: SINGLE CLEAN REGISTRATION / LOGIN CARD */}
       <main id="sap-portal-main" className="flex-1 w-full max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-center z-10 my-auto">
+        {/* TOP INSTANT MIGRATION BANNER */}
+        <div className="w-full mb-4 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 p-4 rounded-3xl border-2 border-amber-300 text-slate-950 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="w-10 h-10 rounded-2xl bg-slate-950 text-amber-400 flex items-center justify-center font-black shrink-0 shadow">
+              <Database className="w-5 h-5 text-amber-400" />
+            </div>
+            <div className="text-right">
+              <h4 className="text-xs sm:text-sm font-black text-slate-950">
+                لديك نسخة احتياطية من «المحاسب المحترف» (.DMP)؟
+              </h4>
+              <p className="text-[11px] font-bold text-slate-900">
+                استورد كافة العملاء والموردين والمخزون والأرصدة بضغطة زر واحدة
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              soundService.playSound("SUCCESS_CHIME");
+              const user: ERPUser = {
+                id: "USR-MIGRATION-ADMIN",
+                name: "مدير النظام (ترحيل البيانات)",
+                role: "SYSTEM_ADMIN",
+                branch: availableBranches[0]?.nameAr || "الفرع الرئيسي - صنعاء",
+                branchId: selectedBranchId,
+                avatar: "BM",
+                status: "ACTIVE",
+                plan: "ENTERPRISE",
+              };
+              localStorage.setItem("medo_open_tab_after_login", "DATA_MIGRATION");
+              onLoginSuccess(user, selectedBranchId, {
+                clientId: currentClient.id,
+                clientName: currentClient.nameAr,
+                warehouseId: selectedWarehouseId,
+              });
+            }}
+            className="w-full sm:w-auto px-4 py-2.5 bg-slate-950 hover:bg-slate-900 text-amber-300 hover:text-white font-black text-xs sm:text-sm rounded-2xl border border-slate-800 shadow-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center justify-center gap-2 shrink-0"
+          >
+            <span>🚀 ترحيل ملف .DMP فوراً</span>
+          </button>
+        </div>
+
         <div className="w-full bg-gradient-to-br from-[#06182a]/95 via-[#081f36]/95 to-[#040e18]/95 border border-[#d4af37]/30 rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl space-y-6">
           
           {/* Header of Card */}

@@ -306,19 +306,42 @@ export const CorporateWebsite: React.FC<CorporateWebsiteProps> = ({ availableBra
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-3">
+              <button
+                onClick={() => {
+                  soundService.playSound("SUCCESS_CHIME");
+                  const user = {
+                    id: "USR-MIGRATION-ADMIN",
+                    name: "مدير النظام (ترحيل البيانات)",
+                    role: "SYSTEM_ADMIN",
+                    branch: "الفرع الرئيسي - صنعاء",
+                    branchId: "BR-SANAA-MAIN",
+                    avatar: "BM",
+                    status: "ACTIVE",
+                    plan: "ENTERPRISE",
+                  };
+                  localStorage.setItem("medo_open_tab_after_login", "DATA_MIGRATION");
+                  onLoginSuccess(user, "BR-SANAA-MAIN");
+                }}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-slate-950 font-black text-xs border border-amber-300 shadow-lg shadow-amber-900/40 transition-all flex items-center gap-1.5 cursor-pointer animate-pulse"
+                title="فتح شاشة ترحيل ملفات النسخ الاحتياطي (.DMP) فوراً"
+              >
+                <Database className="w-4 h-4 text-slate-950" />
+                <span>📥 ترحيل المحاسب المحترف (.DMP)</span>
+              </button>
+
               <button 
                 id="header-login-btn"
                 onClick={() => { setDefaultShowSaaSOnboarding(false); setShowLogin(true); }}
-                className="px-6 py-2.5 rounded-xl text-[#0a2540] font-black text-sm bg-gradient-to-r from-[#d4af37] via-[#f1c40f] to-[#d4af37] hover:brightness-110 border border-[#b8860b] transition-all cursor-pointer shadow-md shadow-[0_4px_14px_rgba(212,175,55,0.3)] transform hover:scale-[1.02]"
+                className="px-5 py-2.5 rounded-xl text-[#0a2540] font-black text-sm bg-gradient-to-r from-[#d4af37] via-[#f1c40f] to-[#d4af37] hover:brightness-110 border border-[#b8860b] transition-all cursor-pointer shadow-md shadow-[0_4px_14px_rgba(212,175,55,0.3)] transform hover:scale-[1.02]"
               >
-                تسجيل الدخول للنظام
+                تسجيل الدخول
               </button>
               <button 
                 id="header-trial-btn"
                 onClick={() => { setDefaultShowSaaSOnboarding(true); setShowLogin(true); }}
-                className="marketing-cta-btn px-6 py-2.5 rounded-xl font-bold text-sm shadow-md cursor-pointer transition-all hover:brightness-110 bg-[#0a2540]/60 text-white hover:bg-[#0a2540] border-2 border-[#d4af37]"
+                className="marketing-cta-btn px-5 py-2.5 rounded-xl font-bold text-sm shadow-md cursor-pointer transition-all hover:brightness-110 bg-[#0a2540]/60 text-white hover:bg-[#0a2540] border-2 border-[#d4af37]"
               >
-                جرب الآن مجاناً
+                جرب مجاناً
               </button>
             </div>
 
@@ -430,6 +453,29 @@ export const CorporateWebsite: React.FC<CorporateWebsiteProps> = ({ availableBra
                   {/* Call to Action Container */}
                   <div className="space-y-4 pt-2">
                     <div className="flex flex-col sm:flex-row items-center gap-3.5 justify-center lg:justify-start">
+                      {/* Mohasib Migration Golden Button */}
+                      <button 
+                        onClick={() => {
+                          soundService.playSound("SUCCESS_CHIME");
+                          const user = {
+                            id: "USR-MIGRATION-ADMIN",
+                            name: "مدير النظام (ترحيل البيانات)",
+                            role: "SYSTEM_ADMIN",
+                            branch: "الفرع الرئيسي - صنعاء",
+                            branchId: "BR-SANAA-MAIN",
+                            avatar: "BM",
+                            status: "ACTIVE",
+                            plan: "ENTERPRISE",
+                          };
+                          localStorage.setItem("medo_open_tab_after_login", "DATA_MIGRATION");
+                          onLoginSuccess(user, "BR-SANAA-MAIN");
+                        }}
+                        className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:brightness-110 text-slate-950 font-black text-sm sm:text-base border-2 border-amber-300 shadow-xl shadow-amber-900/40 flex items-center justify-center gap-2.5 cursor-pointer transition-all active:scale-95"
+                      >
+                        <Database className="w-5 h-5 text-slate-950" />
+                        <span>📥 ترحيل نسخة المحاسب المحترف (.DMP)</span>
+                      </button>
+
                       {/* Primary Golden CTA Button */}
                       <button 
                         id="hero-cta-trial-btn"
@@ -437,7 +483,7 @@ export const CorporateWebsite: React.FC<CorporateWebsiteProps> = ({ availableBra
                         className="marketing-cta-btn w-full sm:w-auto px-8 py-4 rounded-2xl shadow-xl flex items-center justify-center gap-3 cursor-pointer group bg-gradient-to-r from-[#d4af37] to-[#f39c12] hover:from-[#f39c12] hover:to-[#d4af37] text-[#0A2540] font-black"
                       >
                         <Sparkles className="w-5 h-5 text-[#0A2540]" />
-                        <span className="text-base sm:text-lg font-black">ابدأ رحلة النجاح الآن</span>
+                        <span className="text-base sm:text-lg font-black">ابدأ الآن مجاناً</span>
                         <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
                       </button>
 

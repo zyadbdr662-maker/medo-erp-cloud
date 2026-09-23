@@ -336,6 +336,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Upgrade & License CTAs */}
             <button
+              onClick={() => setActiveTab("DATA_MIGRATION")}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 border border-amber-300/60 text-slate-950 font-black text-xs shadow-lg shadow-amber-900/40 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+            >
+              <Database className="w-4 h-4 text-slate-950" />
+              <span>ترحيل نسخة المحاسب المحترف (.DMP)</span>
+            </button>
+
+            <button
               onClick={() => onOpenTrialLockModal ? onOpenTrialLockModal() : setActiveTab("EXECUTIVE_MASTER_SUITE")}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-sap-primary hover:bg-[#14532D] border border-sap-secondary/60 text-sap-secondary font-bold text-xs shadow-lg shadow-sap-primary/30 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
             >

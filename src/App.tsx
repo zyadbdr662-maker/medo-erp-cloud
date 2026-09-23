@@ -2425,7 +2425,11 @@ export default function App() {
           onLoginSuccess={(user, branchId) => {
             if (user) {
               setErpState((prev) => (prev ? { ...prev, currentUser: user, activeBranchId: branchId || prev.activeBranchId } : prev));
-              if (user.role === "CASHIER") {
+              const customTab = localStorage.getItem("medo_open_tab_after_login");
+              if (customTab) {
+                localStorage.removeItem("medo_open_tab_after_login");
+                setActiveTab(customTab as any);
+              } else if (user.role === "CASHIER") {
                 setActiveTab("SALES_RETURNS");
               } else if (user.role === "DATA_ENTRY") {
                 setActiveTab("PURCHASES_RETURNS");
