@@ -98,7 +98,7 @@ export const MohasibDataMigrationWizard: React.FC<MohasibDataMigrationWizardProp
     } catch (err: any) {
       console.error("Parse error:", err);
       setUploadError(err.message || "تعذر قراءة ملف النسخة الاحتياطية. يرجى التأكد من صيغة الملف.");
-      soundService.playSound("ALERT");
+      soundService.playSound("ENCRYPTION_VIOLATION_ALARM");
     } finally {
       setIsParsing(false);
     }

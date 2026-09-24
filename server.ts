@@ -81,6 +81,29 @@ app.get("/api/download/android-apk", (_req, res) => {
   res.send(dummyApkBuffer);
 });
 
+// Serve static downloads directory
+app.use("/downloads", express.static(path.join(process.cwd(), "public", "downloads")));
+
+// Direct Download Endpoint for Reference Document in Word (.docx) Format
+app.get("/api/download/docs/docx", (_req, res) => {
+  const file = path.join(process.cwd(), "public", "downloads", "MeDo_ERP_System_Reference.docx");
+  if (fs.existsSync(file)) {
+    res.download(file, "MeDo_ERP_System_Reference.docx");
+  } else {
+    res.status(404).json({ error: "File not found" });
+  }
+});
+
+// Direct Download Endpoint for Reference Document in PDF (.pdf) Format
+app.get("/api/download/docs/pdf", (_req, res) => {
+  const file = path.join(process.cwd(), "public", "downloads", "MeDo_ERP_System_Reference.pdf");
+  if (fs.existsSync(file)) {
+    res.download(file, "MeDo_ERP_System_Reference.pdf");
+  } else {
+    res.status(404).json({ error: "File not found" });
+  }
+});
+
 // AI Voice Search & Intent Routing Endpoint with Journal Entry Generation
 app.post("/api/ai/voice-search", async (req, res) => {
   try {

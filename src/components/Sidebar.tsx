@@ -43,6 +43,7 @@ import {
   Scale,
   Handshake,
   Calculator,
+  Database,
 } from "lucide-react";
 import { PWAInstallButton } from "./PWAInstallButton";
 import { BzmtLogo } from "./BzmtLogo";

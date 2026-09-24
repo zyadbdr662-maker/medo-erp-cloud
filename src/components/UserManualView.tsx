@@ -46,6 +46,7 @@ import {
 import { NavTab } from "./Sidebar";
 import { ERPUser } from "../types/erp";
 import { SystemFooter } from "./SystemFooter";
+import { exportComprehensiveTechnicalReferencePdf } from "../services/pdfExporter";
 
 interface UserManualViewProps {
   onNavigateToModule?: (tab: NavTab) => void;
@@ -109,6 +110,8 @@ export const UserManualView: React.FC<UserManualViewProps> = ({
   const [activeTabSubView, setActiveTabSubView] = useState<"GUIDES" | "SIMULATOR" | "GLOSSARY" | "PHARMA_SPECIAL">("GUIDES");
   const [simulatorScenario, setSimulatorScenario] = useState<string>("SALES_CREDIT");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [isExportingFullPdf, setIsExportingFullPdf] = useState(false);
+  const [exportSuccessMsg, setExportSuccessMsg] = useState(false);
 
   const categories = [
     { id: "ALL", label: "كافة الوحدات (الكل)" },
@@ -1152,6 +1155,24 @@ export const UserManualView: React.FC<UserManualViewProps> = ({
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const handleExportFullTechnicalReferencePdf = async () => {
+    setIsExportingFullPdf(true);
+    try {
+      await exportComprehensiveTechnicalReferencePdf(
+        modulesData,
+        glossaryTerms,
+        companyName,
+        currentUser?.name
+      );
+      setExportSuccessMsg(true);
+      setTimeout(() => setExportSuccessMsg(false), 4000);
+    } catch (err) {
+      console.error("Failed to export full technical reference PDF:", err);
+    } finally {
+      setIsExportingFullPdf(false);
+    }
+  };
+
   const glossaryTerms = [
     { termAr: "شجرة الحسابات", termEn: "Chart of Accounts (CoA)", def: "قائمة منظمة تضم جميع حسابات المنشأة مقسمة إلى أصول، خصوم، حقوق ملكية، إيرادات، ومصروفات." },
     { termAr: "القيد المزدوج", termEn: "Double-Entry Bookkeeping", def: "نظام محاسبي ينص على أن كل عملية مالية تؤثر على حسابين على الأقل بحيث يتساوى الطرف المدين مع الطرف الدائن دائماً." },
@@ -1197,12 +1218,46 @@ export const UserManualView: React.FC<UserManualViewProps> = ({
 
           <div className="flex flex-wrap items-center gap-2.5 print:hidden">
             <button
+              type="button"
+              onClick={handleExportFullTechnicalReferencePdf}
+              disabled={isExportingFullPdf}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-emerald-400 to-amber-500 hover:from-amber-300 hover:to-emerald-300 text-slate-950 font-black text-xs transition flex items-center gap-2 border border-amber-300/60 shadow-xl cursor-pointer active:scale-95 disabled:opacity-50"
+              title="تصدير المرجع الفني الشامل والتوثيق المحاسبي كملف PDF رسمي منظم ومصمم مع شعار المنظومة وبيانات المنشأة المعتمدة"
+            >
+              <Download className={`w-4 h-4 text-slate-950 ${isExportingFullPdf ? "animate-spin" : ""}`} />
+              <span>
+                {isExportingFullPdf
+                  ? "جاري إنشاء وتصدير المرجع PDF..."
+                  : exportSuccessMsg
+                  ? "تم تصدير المرجع الفني ✓"
+                  : "تصدير المرجع الفني الشامل (PDF)"}
+              </span>
+            </button>
+            <a
+              href="/api/download/docs/docx"
+              download="MeDo_ERP_System_Reference.docx"
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition flex items-center gap-2 border border-blue-400/30 shadow cursor-pointer"
+              title="تحميل المرجع الشامل والتوثيق المرجعي بصيغة وورد (Word .docx)"
+            >
+              <Download className="w-4 h-4 text-blue-200" />
+              <span>تحميل وورد (.docx)</span>
+            </a>
+            <a
+              href="/api/download/docs/pdf"
+              download="MeDo_ERP_System_Reference.pdf"
+              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-2 border border-emerald-400/30 shadow cursor-pointer"
+              title="تحميل المرجع الشامل المسبق إعداده بصيغة PDF"
+            >
+              <Download className="w-4 h-4 text-emerald-200" />
+              <span>تحميل PDF مباشر</span>
+            </a>
+            <button
               onClick={() => window.print()}
               className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center gap-2 border border-white/10 shadow"
               title="طباعة الدليل أو حفظه بصيغة PDF"
             >
               <Printer className="w-4 h-4 text-emerald-400" />
-              <span>طباعة الدليل / PDF</span>
+              <span>طباعة الدليل</span>
             </button>
             <button
               onClick={expandAll}
