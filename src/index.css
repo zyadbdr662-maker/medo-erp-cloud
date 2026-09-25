@@ -46,30 +46,35 @@
    2. FONT SIZES, WEIGHTS & SPACING (ACCORDING TO SPECIFICATIONS)
    ------------------------------------------------------------- */
 
-/* عناوين الصفحات الرئيسية: 24px - 28px (26px) | Bold (700) أو Extra Bold (800) */
+/* Arabic font letter-spacing rule: MUST be normal/0 for correct character joining in web and html2canvas */
+*, *::before, *::after, [dir="rtl"], [dir="rtl"] * {
+  letter-spacing: normal !important;
+}
+
+/* عناوين الصفحات الرئيسية: 28px - 32px | Bold (700) أو Extra Bold (800) */
 h1, .page-title, .text-4xl {
-  font-size: 32px !important;
+  font-size: 30px !important;
   font-weight: 900 !important;
   line-height: 1.35 !important;
-  letter-spacing: 0.5px !important;
+  letter-spacing: normal !important;
 }
 
 h2, .section-title, .text-3xl {
-  font-size: 28px !important;
+  font-size: 26px !important;
   font-weight: 800 !important;
   line-height: 1.4 !important;
-  letter-spacing: 0.5px !important;
+  letter-spacing: normal !important;
 }
 
-/* عناوين البطاقات (Cards): 18px - 20px (19px) | Semi Bold (600) أو Bold (700) */
+/* عناوين البطاقات (Cards): 18px - 20px | Semi Bold (600) أو Bold (700) */
 h3, .card-title, .card-header, .text-2xl {
-  font-size: 24px !important;
+  font-size: 22px !important;
   font-weight: 800 !important;
   line-height: 1.4 !important;
 }
 
 h4, h5, h6, .text-xl {
-  font-size: 20px !important;
+  font-size: 18px !important;
   font-weight: 700 !important;
   line-height: 1.45 !important;
 }

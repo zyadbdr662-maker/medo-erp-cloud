@@ -36,12 +36,14 @@ export async function exportElementToPdf(elementId: string, filename: string): P
   const opt = {
     margin: [6, 6, 6, 6],
     filename: cleanFilename,
-    image: { type: "jpeg", quality: 0.98 },
+    image: { type: "jpeg", quality: 0.99 },
     html2canvas: {
-      scale: 2,
+      scale: 2.5,
       useCORS: true,
+      allowTaint: true,
       logging: false,
       backgroundColor: "#ffffff",
+      letterRendering: true,
       windowWidth: 820,
       scrollX: 0,
       scrollY: 0,
@@ -57,6 +59,8 @@ export async function exportElementToPdf(elementId: string, filename: string): P
   // 2. Clone the element to an isolated top-level container to prevent clipping and transform issues
   const clone = element.cloneNode(true) as HTMLElement;
   clone.id = `${elementId}-export-clone`;
+  clone.classList.remove("doc-mode-dark");
+  clone.classList.add("doc-mode-light");
 
   // Preserve canvases (like ZATCA QR code)
   const origCanvases = element.querySelectorAll("canvas");
@@ -97,6 +101,9 @@ export async function exportElementToPdf(elementId: string, filename: string): P
   clone.style.visibility = "visible";
   clone.style.display = "block";
   clone.style.opacity = "1";
+  clone.style.direction = "rtl";
+  clone.style.fontFamily = "'Cairo', 'Tajawal', sans-serif";
+  clone.style.letterSpacing = "0px";
 
   // Enforce white background and dark text for all tables and rows in clone
   const tables = clone.querySelectorAll("table");
@@ -104,6 +111,7 @@ export async function exportElementToPdf(elementId: string, filename: string): P
     t.style.backgroundColor = "#FFFFFF";
     t.style.borderCollapse = "collapse";
     t.style.width = "100%";
+    t.style.tableLayout = "fixed";
     t.style.border = "1px solid #94A3B8";
   });
   const headers = clone.querySelectorAll("th");
@@ -113,6 +121,9 @@ export async function exportElementToPdf(elementId: string, filename: string): P
     th.style.borderColor = "#94A3B8";
     th.style.boxShadow = "none";
     th.style.fontWeight = "700";
+    th.style.letterSpacing = "0px";
+    th.style.wordBreak = "break-word";
+    th.style.overflowWrap = "break-word";
   });
   const cells = clone.querySelectorAll("td");
   cells.forEach((td) => {
@@ -120,6 +131,9 @@ export async function exportElementToPdf(elementId: string, filename: string): P
     td.style.color = "#000000";
     td.style.borderColor = "#CBD5E1";
     td.style.boxShadow = "none";
+    td.style.letterSpacing = "0px";
+    td.style.wordBreak = "break-word";
+    td.style.overflowWrap = "break-word";
   });
   const allCloned = clone.querySelectorAll("*");
   allCloned.forEach((node) => {
@@ -127,10 +141,19 @@ export async function exportElementToPdf(elementId: string, filename: string): P
     el.style.boxShadow = "none";
     el.style.textShadow = "none";
     el.style.filter = "none";
+    el.style.letterSpacing = "0px";
     if (el.tagName === "BUTTON" || el.classList.contains("no-print") || el.classList.contains("print:hidden")) {
       el.style.display = "none";
     } else {
       el.style.visibility = "visible";
+      // If node had a dark background or dark theme text color, force high-contrast white paper theme
+      const currentBg = el.style.backgroundColor;
+      if (currentBg && (currentBg.includes("1E2A3A") || currentBg.includes("162231") || currentBg.includes("0A2540") || currentBg.includes("141D2B"))) {
+        el.style.backgroundColor = "#F8FAFC";
+      }
+      if (el.style.color && (el.style.color.includes("255") || el.style.color.includes("E8ECF1") || el.style.color.includes("B0C4DE"))) {
+        el.style.color = "#000000";
+      }
     }
   });
 
@@ -300,14 +323,21 @@ export async function exportInvoiceToPdf(
   let tableHtml = "";
   if (documentType === "INVOICE" && documentData.items) {
     tableHtml = `
-      <table style="width:100%; border-collapse:collapse; margin-top:16px; font-size:13px; text-align:right; border:1px solid #CBD5E1; background-color:#FFFFFF;">
+      <table style="width:100%; table-layout:fixed; border-collapse:collapse; margin-top:16px; font-size:11px; text-align:right; border:1px solid #CBD5E1; background-color:#FFFFFF;">
+        <colgroup>
+          <col style="width: 5%;" />
+          <col style="width: 40%;" />
+          <col style="width: 12%;" />
+          <col style="width: 20%;" />
+          <col style="width: 23%;" />
+        </colgroup>
         <thead>
           <tr style="background-color:#F8FAFC; color:#0A2540;">
-            <th style="padding:10px 14px; border:1px solid #CBD5E1; text-align:center; font-weight:700; font-size:13px; color:#0A2540;">#</th>
-            <th style="padding:10px 14px; border:1px solid #CBD5E1; font-weight:700; font-size:13px; color:#0A2540;">بيان الصنف / الخدمة</th>
-            <th style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-weight:700; font-size:13px; color:#0A2540;">الكمية</th>
-            <th style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-weight:700; font-size:13px; color:#0A2540;">سعر الوحدة</th>
-            <th style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-weight:700; font-size:13px; color:#0A2540;">الإجمالي</th>
+            <th style="padding:6px 8px; border:1px solid #CBD5E1; text-align:center; font-weight:700; font-size:12px; color:#0A2540; overflow:hidden; word-break:break-word;">#</th>
+            <th style="padding:6px 8px; border:1px solid #CBD5E1; font-weight:700; font-size:12px; color:#0A2540; overflow:hidden; word-break:break-word;">بيان الصنف / الخدمة</th>
+            <th style="padding:6px 8px; border:1px solid #CBD5E1; text-align:left; font-weight:700; font-size:12px; color:#0A2540; overflow:hidden; word-break:break-word;">الكمية</th>
+            <th style="padding:6px 8px; border:1px solid #CBD5E1; text-align:left; font-weight:700; font-size:12px; color:#0A2540; overflow:hidden; word-break:break-word;">سعر الوحدة</th>
+            <th style="padding:6px 8px; border:1px solid #CBD5E1; text-align:left; font-weight:700; font-size:12px; color:#0A2540; overflow:hidden; word-break:break-word;">الإجمالي</th>
           </tr>
         </thead>
         <tbody>
@@ -315,11 +345,11 @@ export async function exportInvoiceToPdf(
             .map(
               (item: any, idx: number) => `
             <tr style="background-color:${idx % 2 === 1 ? "#F8FAFC" : "#FFFFFF"};">
-              <td style="padding:9px 14px; border:1px solid #CBD5E1; text-align:center; font-family:monospace; color:#1A2B4C; font-size:13px; font-weight:700;">${idx + 1}</td>
-              <td style="padding:9px 14px; border:1px solid #CBD5E1; color:#1A2B4C; font-size:13px; font-weight:700;">${item.description || item.itemName}</td>
-              <td style="padding:9px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; color:#1A2B4C; font-size:13px; font-weight:700;">${item.quantity} ${item.unit || ""}</td>
-              <td style="padding:9px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; color:#1A2B4C; font-size:13px; font-weight:700;">${formatNumberOnly(item.unitPrice)}</td>
-              <td style="padding:9px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; font-weight:700; color:#1A2B4C; font-size:13px;">${formatNumberOnly(item.total)}</td>
+              <td style="padding:6px 8px; border:1px solid #CBD5E1; text-align:center; font-family:monospace; color:#1A2B4C; font-size:11px; font-weight:700; overflow:hidden; word-break:break-word;">${idx + 1}</td>
+              <td style="padding:6px 8px; border:1px solid #CBD5E1; color:#1A2B4C; font-size:11px; font-weight:700; overflow:hidden; word-break:break-word;">${item.description || item.itemName}</td>
+              <td style="padding:6px 8px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; color:#1A2B4C; font-size:11px; font-weight:700; overflow:hidden; word-break:break-word;">${item.quantity} ${item.unit || ""}</td>
+              <td style="padding:6px 8px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; color:#1A2B4C; font-size:11px; font-weight:700; overflow:hidden; word-break:break-word;">${formatNumberOnly(item.unitPrice)}</td>
+              <td style="padding:6px 8px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; font-weight:700; color:#1A2B4C; font-size:11px; overflow:hidden; word-break:break-word;">${formatNumberOnly(item.total)}</td>
             </tr>
           `
             )
@@ -327,8 +357,8 @@ export async function exportInvoiceToPdf(
         </tbody>
         <tfoot>
           <tr style="background-color:#F1F5F9; font-weight:700;">
-            <td colspan="4" style="padding:10px 14px; border:1px solid #CBD5E1; color:#0A2540; font-size:13px;">الإجمالي العام:</td>
-            <td style="padding:10px 14px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; color:#0A2540; font-size:14px; font-weight:700;">
+            <td colspan="4" style="padding:6px 8px; border:1px solid #CBD5E1; color:#0A2540; font-size:12px; overflow:hidden; word-break:break-word;">الإجمالي العام:</td>
+            <td style="padding:6px 8px; border:1px solid #CBD5E1; text-align:left; font-family:monospace; color:#0A2540; font-size:12px; font-weight:700; overflow:hidden; word-break:break-word;">
               ${formatMoney(documentData.totalAmount || documentData.grandTotal, documentData.currency, currencies)}
             </td>
           </tr>

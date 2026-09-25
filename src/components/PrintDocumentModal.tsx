@@ -306,10 +306,14 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
 
   const handleExportPdf = async () => {
     setIsExporting(true);
+    const canvasEl = document.getElementById("printable-document-canvas");
     const wasDark = previewMode === "DARK";
     if (wasDark) {
       setPreviewMode("LIGHT");
-      await new Promise((r) => setTimeout(r, 120));
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    if (canvasEl) {
+      canvasEl.classList.add("pdf-exporting-official");
     }
     const docNum =
       documentData.invoiceNumber ||
@@ -320,6 +324,9 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
     try {
       await exportElementToPdf("printable-document-canvas", filename);
     } finally {
+      if (canvasEl) {
+        canvasEl.classList.remove("pdf-exporting-official");
+      }
       if (wasDark) {
         setPreviewMode("DARK");
       }
@@ -1437,17 +1444,30 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
               {/* Items Table (Official table: always used in print, and on screen when in TABLE or AUTO mode) */}
               <div className={`overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 ${mobileItemView === "CARDS" ? "hidden sm:block print:block" : "block"}`}>
                 <table
-                  className="w-full border-collapse text-right doc-table min-w-[500px] sm:min-w-full"
-                  style={{ borderColor: colors.border }}
+                  className="w-full border-collapse text-right doc-table"
+                  style={{
+                    borderColor: colors.border,
+                    tableLayout: "fixed",
+                    width: "100%",
+                  }}
                 >
+                  <colgroup>
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "44%" }} />
+                    <col style={{ width: "14%" }} />
+                    <col style={{ width: "16%" }} />
+                    <col style={{ width: "20%" }} />
+                  </colgroup>
                   <thead>
                     <tr>
                       <th
-                        className="doc-table-th text-center w-12"
+                        className="doc-table-th text-center"
                         style={{
                           backgroundColor: colors.thBg,
                           color: colors.thText,
                           borderColor: colors.border,
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word",
                         }}
                       >
                         #
@@ -1458,6 +1478,8 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                           backgroundColor: colors.thBg,
                           color: colors.thText,
                           borderColor: colors.border,
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word",
                         }}
                       >
                         بيان الصنف / الخدمة
@@ -1468,6 +1490,8 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                           backgroundColor: colors.thBg,
                           color: colors.thText,
                           borderColor: colors.border,
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word",
                         }}
                       >
                         الكمية
@@ -1478,6 +1502,8 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                           backgroundColor: colors.thBg,
                           color: colors.thText,
                           borderColor: colors.border,
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word",
                         }}
                       >
                         سعر الوحدة
@@ -1488,6 +1514,8 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                           backgroundColor: colors.thBg,
                           color: colors.thText,
                           borderColor: colors.border,
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word",
                         }}
                       >
                         الإجمالي
