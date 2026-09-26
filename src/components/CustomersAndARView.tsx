@@ -1119,7 +1119,10 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
 
       {/* Customer Account Statement Modal */}
       {selectedCustomerForStatement && (() => {
-        // Construct transaction history
+        const activeTenantMeta = TenantIsolationService.getActiveTenantDetails();
+        const effectiveCompanyName = activeTenantMeta.nameAr || "ميدو تك - MeDo ERP";
+
+        // Construct transaction history matching all identifiers (id, partyId, customerName, partyName, glAccountId)
         const statementTransactions: {
           id: string;
           date: string;
@@ -1131,45 +1134,55 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
           rawType: "SALES" | "SALES_RETURN" | "RECEIPT" | "OTHER";
         }[] = [];
 
-        // 1. Add Invoices
+        // 1. Add Invoices matching customer by id, partyId, or name
         invoices
           .filter(
             (inv) =>
               inv.customerId === selectedCustomerForStatement.id ||
-              inv.customerName === selectedCustomerForStatement.nameAr
+              inv.partyId === selectedCustomerForStatement.id ||
+              (inv.customerName && inv.customerName.trim() === selectedCustomerForStatement.nameAr.trim()) ||
+              (inv.partyName && inv.partyName.trim() === selectedCustomerForStatement.nameAr.trim())
           )
           .forEach((inv) => {
             const isReturn = inv.type === "SALES_RETURN";
+            const amount = Number(inv.totalAmount || inv.grandTotal || 0);
             statementTransactions.push({
               id: inv.id,
-              date: inv.date,
+              date: inv.date || new Date().toISOString().split("T")[0],
               type: isReturn ? "مرتجع مبيعات (إشعار دائن)" : "فاتورة مبيعات آجل",
-              reference: inv.invoiceNumber,
-              debit: isReturn ? 0 : (inv.totalAmount || inv.grandTotal || 0),
-              credit: isReturn ? (inv.totalAmount || inv.grandTotal || 0) : 0,
+              reference: inv.invoiceNumber || "INV-2026",
+              debit: isReturn ? 0 : amount,
+              credit: isReturn ? amount : 0,
               notes: inv.notes || (isReturn ? "إشعار دائن لمرتجع مبيعات" : "فاتورة مبيعات آجل رقم " + inv.invoiceNumber),
               rawType: isReturn ? "SALES_RETURN" : "SALES",
             });
           });
 
-        // 2. Add Receipts (Vouchers)
+        // 2. Add Receipts / Vouchers
         vouchers
           .filter((vch) => {
             const isReceipt = vch.type === "RECEIPT";
-            const matchesAccount = vch.destinationAccountId === selectedCustomerForStatement.glAccountId;
+            const vchAny = vch as any;
+            const matchesAccount =
+              vch.destinationAccountId === selectedCustomerForStatement.glAccountId ||
+              vchAny.accountId === selectedCustomerForStatement.glAccountId;
             const matchesName =
-              vch.beneficiaryOrPayer === selectedCustomerForStatement.nameAr ||
-              vch.beneficiaryOrPayer === selectedCustomerForStatement.nameEn;
-            return isReceipt && (matchesAccount || matchesName);
+              (vch.beneficiaryOrPayer && vch.beneficiaryOrPayer.trim() === selectedCustomerForStatement.nameAr.trim()) ||
+              (vch.partyName && vch.partyName.trim() === selectedCustomerForStatement.nameAr.trim());
+            const matchesId =
+              vchAny.customerId === selectedCustomerForStatement.id ||
+              vchAny.partyId === selectedCustomerForStatement.id;
+            return isReceipt && (matchesAccount || matchesName || matchesId);
           })
           .forEach((vch) => {
+            const amount = Number(vch.amount || 0);
             statementTransactions.push({
               id: vch.id,
-              date: vch.date,
+              date: vch.date || new Date().toISOString().split("T")[0],
               type: "سند قبض مالي",
-              reference: vch.voucherNumber,
+              reference: vch.voucherNumber || "REC-2026",
               debit: 0,
-              credit: vch.amount,
+              credit: amount,
               notes: vch.notes || "استلام دفعة من الحساب - سند رقم " + vch.voucherNumber,
               rawType: "RECEIPT",
             });
@@ -1178,7 +1191,7 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
         // Sort ascendingly by date to calculate running balance correctly
         statementTransactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        // Calculate running balance
+        // Calculate running balance starting from 0 or customer's starting balance if any
         let runningBal = 0;
         const statementWithBalance = statementTransactions.map((tx) => {
           runningBal = runningBal + tx.debit - tx.credit;
@@ -1190,6 +1203,7 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
 
         const totalDebit = statementWithBalance.reduce((sum, tx) => sum + tx.debit, 0);
         const totalCredit = statementWithBalance.reduce((sum, tx) => sum + tx.credit, 0);
+        const finalCalculatedBalance = statementWithBalance.length > 0 ? runningBal : (selectedCustomerForStatement.currentBalance || 0);
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
@@ -1202,7 +1216,7 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
                 <div>
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <FileText className="w-5 h-5 text-blue-400" />
-                    <span>كشف الحساب التفصيلي للعميل</span>
+                    <span>كشف الحساب التفصيلي للعميل - {effectiveCompanyName}</span>
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     العميل: <span className="font-extrabold text-white">{selectedCustomerForStatement.nameAr}</span> | 
@@ -1221,14 +1235,14 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
               {/* Financial Dashboard Summary cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 shrink-0">
                 <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-right">
-                  <div className="text-[10px] font-bold text-slate-500">إجمالي المبيعات (مدين +)</div>
+                  <div className="text-[10px] font-bold text-slate-500">إجمالي المبيعات والالتزامات (مدين +)</div>
                   <div className="text-sm font-extrabold text-blue-400 font-mono mt-1">
                     {formatMoney(totalDebit, selectedCustomerForStatement.currency, currencies)}
                   </div>
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-right">
-                  <div className="text-[10px] font-bold text-slate-500">إجمالي المقبوضات/المرتجعات (دائن -)</div>
+                  <div className="text-[10px] font-bold text-slate-500">إجمالي المقبوضات والدفعات (دائن -)</div>
                   <div className="text-sm font-extrabold text-emerald-400 font-mono mt-1">
                     {formatMoney(totalCredit, selectedCustomerForStatement.currency, currencies)}
                   </div>
@@ -1237,37 +1251,47 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
                 <div className="p-3 rounded-xl bg-slate-950/60 border border-blue-900/40 text-right">
                   <div className="text-[10px] font-bold text-blue-400">الرصيد التراكمي المستحق (صافي المديونية)</div>
                   <div className="text-sm font-black text-amber-400 font-mono mt-1">
-                    {formatMoney(selectedCustomerForStatement.currentBalance, selectedCustomerForStatement.currency, currencies)}
+                    {formatMoney(finalCalculatedBalance, selectedCustomerForStatement.currency, currencies)}
                   </div>
                 </div>
               </div>
 
               {/* Transaction Statement Table */}
-              <div className="flex-1 overflow-y-auto border border-slate-800 rounded-xl bg-slate-950 min-h-[250px]">
+              <div id="customer-statement-print-area" className="flex-1 overflow-y-auto border border-slate-800 rounded-xl bg-slate-950 min-h-[250px] p-2">
                 {statementWithBalance.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-slate-500 text-xs">
                     <Clock className="w-8 h-8 text-slate-600 mb-2.5" />
                     <span>لا توجد عمليات مالية مسجلة حالياً لهذا العميل</span>
+                    <span className="text-[11px] text-slate-400 mt-1">الرصيد الافتتاحي القائم: {formatMoney(selectedCustomerForStatement.currentBalance, selectedCustomerForStatement.currency, currencies)}</span>
                   </div>
                 ) : (
-                  <table className="w-full text-xs text-right border-collapse">
+                  <table className="w-full text-xs text-right border-collapse" style={{ tableLayout: "fixed", width: "100%" }}>
+                    <colgroup>
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "20%" }} />
+                      <col style={{ width: "15%" }} />
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "12%" }} />
+                    </colgroup>
                     <thead className="bg-slate-900 text-slate-300 border-b border-slate-800 sticky top-0 z-10">
                       <tr>
-                        <th className="p-3 font-bold">التاريخ</th>
-                        <th className="p-3 font-bold">العملية المعتمدة</th>
-                        <th className="p-3 font-bold">الرقم المرجعي</th>
-                        <th className="p-3 font-bold text-left">مدين (+)</th>
-                        <th className="p-3 font-bold text-left">دائن (-)</th>
-                        <th className="p-3 font-bold text-left">الرصيد التراكمي</th>
-                        <th className="p-3 font-bold">البيان والتفاصيل</th>
+                        <th className="p-2.5 font-bold border border-slate-800 text-right">التاريخ</th>
+                        <th className="p-2.5 font-bold border border-slate-800 text-right">العملية</th>
+                        <th className="p-2.5 font-bold border border-slate-800 text-right">المرجع</th>
+                        <th className="p-2.5 font-bold border border-slate-800 text-left">مدين (+)</th>
+                        <th className="p-2.5 font-bold border border-slate-800 text-left">دائن (-)</th>
+                        <th className="p-2.5 font-bold border border-slate-800 text-left">الرصيد التراكمي</th>
+                        <th className="p-2.5 font-bold border border-slate-800 text-right">البيان والتفاصيل</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/50">
-                      {statementWithBalance.map((tx, idx) => (
+                      {statementWithBalance.map((tx) => (
                         <tr key={tx.id} className="hover:bg-slate-900/40 transition-all">
-                          <td className="p-3 text-slate-400 font-mono whitespace-nowrap">{tx.date}</td>
-                          <td className="p-3 font-medium text-slate-200">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          <td className="p-2 text-slate-300 font-mono whitespace-nowrap overflow-hidden text-ellipsis border border-slate-800/60">{tx.date}</td>
+                          <td className="p-2 font-medium text-slate-200 overflow-hidden text-ellipsis border border-slate-800/60">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                               tx.rawType === "SALES" 
                                 ? "bg-blue-950 text-blue-400 border border-blue-900/40" 
                                 : tx.rawType === "SALES_RETURN"
@@ -1277,17 +1301,17 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
                               {tx.type}
                             </span>
                           </td>
-                          <td className="p-3 font-mono text-slate-300 font-semibold">{tx.reference}</td>
-                          <td className="p-3 text-left font-mono font-bold text-blue-400">
+                          <td className="p-2 font-mono text-slate-300 font-semibold overflow-hidden text-ellipsis border border-slate-800/60">{tx.reference}</td>
+                          <td className="p-2 text-left font-mono font-bold text-blue-400 overflow-hidden text-ellipsis border border-slate-800/60">
                             {tx.debit > 0 ? formatNumberOnly(tx.debit) : "-"}
                           </td>
-                          <td className="p-3 text-left font-mono font-bold text-emerald-400">
+                          <td className="p-2 text-left font-mono font-bold text-emerald-400 overflow-hidden text-ellipsis border border-slate-800/60">
                             {tx.credit > 0 ? formatNumberOnly(tx.credit) : "-"}
                           </td>
-                          <td className="p-3 text-left font-mono font-black text-amber-400">
+                          <td className="p-2 text-left font-mono font-black text-amber-400 overflow-hidden text-ellipsis border border-slate-800/60">
                             {formatNumberOnly(tx.runningBalance)}
                           </td>
-                          <td className="p-3 text-slate-400 text-[11px] max-w-xs truncate" title={tx.notes}>
+                          <td className="p-2 text-slate-300 text-[11px] overflow-hidden text-ellipsis border border-slate-800/60" title={tx.notes}>
                             {tx.notes}
                           </td>
                         </tr>
@@ -1305,39 +1329,48 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
                 <div className="flex items-center gap-2">
                    <button
                     onClick={() => {
-                      const tenantDetails = TenantIsolationService.getActiveTenantDetails();
-                      const companyName = tenantDetails?.nameAr || "مجموعة بن زياد التجارية";
-                      const tenantId = TenantIsolationService.resolveActiveTenant();
+                      const activeTenantMeta = TenantIsolationService.getActiveTenantDetails();
+                      const companyName = activeTenantMeta.nameAr || "ميدو تك - MeDo ERP";
+                      const companyPhone = activeTenantMeta.phone || "";
+                      const todayGregorian = new Date().toISOString().slice(0, 10);
 
-                      // Custom print window or open browser print layout
+                      // Custom print window with colgroup and word-break layout
                       const printContent = `
-                        <html>
+                        <!DOCTYPE html>
+                        <html dir="rtl" lang="ar">
                           <head>
+                            <meta charset="utf-8" />
                             <title>كشف حساب - ${selectedCustomerForStatement.nameAr}</title>
                             <style>
-                              body { font-family: 'Arial', sans-serif; direction: rtl; padding: 30px; color: #111; }
-                              h2 { text-align: center; margin-bottom: 5px; color: #1b365d; }
-                              .header-info { text-align: center; margin-bottom: 25px; font-size: 13px; color: #555; }
-                              .summary-grid { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f4f6f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }
-                              .summary-card { text-align: right; }
-                              .summary-card label { font-size: 11px; color: #666; font-weight: bold; }
-                              .summary-card value { display: block; font-size: 16px; font-weight: bold; margin-top: 5px; }
-                              table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
-                              th { background: #1b365d; color: white; padding: 10px; text-align: right; }
-                              td { padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: right; }
-                              .text-left { text-align: left; }
+                              @page { size: A4 portrait; margin: 10mm; }
+                              body { font-family: 'Cairo', 'Tajawal', sans-serif; direction: rtl; padding: 20px; color: #000000; background: #ffffff; margin: 0; }
+                              .header-box { text-align: center; border-bottom: 2px solid #0A2540; padding-bottom: 12px; margin-bottom: 16px; }
+                              .header-box h1 { margin: 0; font-size: 20px; color: #0A2540; font-weight: 800; }
+                              .header-box h2 { margin: 4px 0 0 0; font-size: 14px; color: #4A5B6F; font-weight: 700; }
+                              .header-info { text-align: center; margin-bottom: 16px; font-size: 12px; color: #333333; background: #F8FAFC; padding: 10px; border-radius: 8px; border: 1px solid #CBD5E1; }
+                              .summary-grid { display: flex; justify-content: space-between; margin-bottom: 16px; background: #F8FAFC; padding: 12px; border-radius: 8px; border: 1px solid #CBD5E1; gap: 10px; }
+                              .summary-card { flex: 1; text-align: right; }
+                              .summary-card label { font-size: 10.5px; color: #4A5B6F; font-weight: bold; display: block; }
+                              .summary-card value { font-size: 14px; font-weight: 800; color: #0A2540; font-family: monospace; display: block; margin-top: 4px; }
+                              table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 10px; font-size: 11px; border: 1px solid #94A3B8; }
+                              th { background: #F8FAFC; color: #0A2540; padding: 6px 8px; text-align: right; font-weight: 700; border: 1px solid #94A3B8; word-break: break-word; overflow: hidden; }
+                              td { padding: 6px 8px; border: 1px solid #CBD5E1; text-align: right; word-break: break-word; overflow: hidden; }
+                              .text-left { text-align: left; font-family: monospace; font-weight: bold; }
                               .bold { font-weight: bold; }
-                              .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #555; border-top: 1px solid #ddd; padding-top: 15px; font-family: monospace; }
+                              .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #64748B; border-top: 1px solid #CBD5E1; padding-top: 10px; font-family: monospace; }
                             </style>
                           </head>
                           <body>
-                            <h2>${companyName}</h2>
-                            <h3 style="text-align: center; margin-top: 0; color: #444;">كشف حساب تفصيلي للعميل</h3>
+                            <div class="header-box">
+                              <h1>🏢 ${companyName}</h1>
+                              <h2>كشف حساب تفصيلي رسمي للعميل (Customer Account Statement)</h2>
+                              ${companyPhone ? `<div style="font-size: 11px; color: #64748B; margin-top: 2px;">تلفون: ${companyPhone}</div>` : ""}
+                            </div>
                             <div class="header-info">
-                              العميل: <strong>${selectedCustomerForStatement.nameAr}</strong> | 
-                              الرمز: <strong>${selectedCustomerForStatement.code}</strong> | 
-                              العملة المعتمدة: <strong>${selectedCustomerForStatement.currency}</strong> | 
-                              تاريخ الطباعة: <strong>${new Date().toISOString().slice(0,10)}</strong>
+                              اسم العميل: <strong>${selectedCustomerForStatement.nameAr}</strong> | 
+                              رمز العميل: <strong>${selectedCustomerForStatement.code}</strong> | 
+                              العملة: <strong>${selectedCustomerForStatement.currency}</strong> | 
+                              تاريخ الاستخراج: <strong>${todayGregorian}</strong>
                             </div>
                             
                             <div class="summary-grid">
@@ -1346,33 +1379,42 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
                                 <value>${formatMoney(totalDebit, selectedCustomerForStatement.currency, currencies)}</value>
                               </div>
                               <div class="summary-card">
-                                <label>إجمالي الدفعات والمقبوضات (دائن -)</label>
+                                <label>إجمالي المقبوضات والدفعات (دائن -)</label>
                                 <value>${formatMoney(totalCredit, selectedCustomerForStatement.currency, currencies)}</value>
                               </div>
                               <div class="summary-card">
-                                <label>الرصيد المتبقي الإجمالي المستحق</label>
-                                <value style="color: #c2410c;">${formatMoney(selectedCustomerForStatement.currentBalance, selectedCustomerForStatement.currency, currencies)}</value>
+                                <label>الرصيد المتبقي المستحق</label>
+                                <value style="color: #c2410c;">${formatMoney(finalCalculatedBalance, selectedCustomerForStatement.currency, currencies)}</value>
                               </div>
                             </div>
                             
                             <table>
+                              <colgroup>
+                                <col style="width: 14%;" />
+                                <col style="width: 20%;" />
+                                <col style="width: 15%;" />
+                                <col style="width: 13%;" />
+                                <col style="width: 13%;" />
+                                <col style="width: 15%;" />
+                                <col style="width: 10%;" />
+                              </colgroup>
                               <thead>
                                 <tr>
                                   <th>التاريخ</th>
-                                  <th>العملية</th>
+                                  <th>نوع العملية</th>
                                   <th>الرقم المرجعي</th>
                                   <th class="text-left">مدين (+)</th>
                                   <th class="text-left">دائن (-)</th>
                                   <th class="text-left">الرصيد التراكمي</th>
-                                  <th>البيان والتفاصيل</th>
+                                  <th>التفاصيل والبيان</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 ${statementWithBalance.map(tx => `
                                   <tr>
-                                    <td>${tx.date}</td>
+                                    <td style="font-family: monospace;">${tx.date}</td>
                                     <td>${tx.type}</td>
-                                    <td>${tx.reference}</td>
+                                    <td style="font-family: monospace;">${tx.reference}</td>
                                     <td class="text-left">${tx.debit > 0 ? formatNumberOnly(tx.debit) : "-"}</td>
                                     <td class="text-left">${tx.credit > 0 ? formatNumberOnly(tx.credit) : "-"}</td>
                                     <td class="text-left bold">${formatNumberOnly(tx.runningBalance)}</td>
@@ -1383,7 +1425,7 @@ export const CustomersAndARView: React.FC<CustomersAndARViewProps> = ({
                             </table>
                             
                             <div class="footer">
-                              🏢 المنشأة: ${companyName} | 🔢 المعرّف: ${tenantId} | 📅 التاريخ: ${new Date().toLocaleDateString("ar-SA")}
+                              © 2026 ${companyName} | نظام المحاسبة والإدارة المتكامل MeDo ERP
                             </div>
                           </body>
                         </html>

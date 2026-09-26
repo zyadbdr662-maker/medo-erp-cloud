@@ -699,53 +699,240 @@ export const ALBADR_ISOLATED_VAULTS: CashVaultItem[] = [
   },
 ];
 
+export const TENANT_KEY = "medo_active_tenant_slug";
+export const TENANT_SESSION_KEY = "medo_tenant_session";
+
+/**
+ * Top-level function: Extracts tenantId / slug directly from URL query or Path
+ */
+export function getTenantIdFromUrl(): string {
+  return TenantIsolationService.getTenantIdFromUrl();
+}
+
+/**
+ * Top-level function: Sets active tenant, purges previous conflicting cache, and persists to localStorage
+ */
+export function setActiveTenant(tenantSlug: string, tenantData?: any): void {
+  TenantIsolationService.setActiveTenant(tenantSlug, tenantData);
+}
+
+/**
+ * Top-level function: Returns active tenant { id, data } or null
+ */
+export function getActiveTenant(): { id: string; data: any } | null {
+  const slug = TenantIsolationService.getActiveTenant();
+  if (!slug) return null;
+  const details = TenantIsolationService.getActiveTenantDetails(slug);
+  return { id: slug, data: details };
+}
+
+/**
+ * Top-level function: Clears active tenant on logout
+ */
+export function clearActiveTenant(): void {
+  TenantIsolationService.clearActiveTenant();
+}
+
+/**
+ * Top-level function: Creates a new tenant and generates unique URL
+ */
+export async function createTenant(data: {
+  name: string;
+  crNumber?: string;
+  vatNumber?: string;
+  ownerEmail: string;
+  phone?: string;
+  industry?: string;
+}): Promise<{ tenantId: string; accessUrl: string; tenantObject: any }> {
+  const result = TenantIsolationService.createTenant({
+    nameAr: data.name,
+    email: data.ownerEmail,
+    phone: data.phone,
+    industry: data.industry,
+  });
+  return {
+    tenantId: result.tenantSlug,
+    accessUrl: result.accessUrl,
+    tenantObject: result.tenantObject,
+  };
+}
+
+/**
+ * Top-level function: Initializes tenant on application bootstrap
+ */
+export function initializeTenant(): { id: string; data: any } | null {
+  const urlTenant = getTenantIdFromUrl();
+  if (urlTenant) {
+    setActiveTenant(urlTenant);
+    return getActiveTenant();
+  }
+  const current = getActiveTenant();
+  return current;
+}
+
 export class TenantIsolationService {
   private static ACTIVE_TENANT_KEY = "medo_active_tenant_slug";
+
+  /**
+   * Extracts tenantId / slug directly from URL query parameters (?tenant=... or ?client=... or ?company=...) or Path
+   */
+  public static getTenantIdFromUrl(): string {
+    if (typeof window !== "undefined" && window.location) {
+      const search = window.location.search || "";
+      const urlParams = new URLSearchParams(search);
+      const clientParam = urlParams.get("tenant") || urlParams.get("client") || urlParams.get("company");
+      if (clientParam) {
+        return clientParam.toLowerCase().trim();
+      }
+      const pathname = window.location.pathname || "";
+      const pathMatch = pathname.match(/\/t\/([a-zA-Z0-9_-]+)/);
+      if (pathMatch && pathMatch[1]) {
+        return pathMatch[1].toLowerCase().trim();
+      }
+    }
+    return "";
+  }
+
+  /**
+   * Sets the active tenant and persists it to localStorage
+   */
+  public static setActiveTenant(tenantSlug: string, tenantData?: any): void {
+    if (typeof window !== "undefined" && tenantSlug) {
+      const cleanSlug = tenantSlug.toLowerCase().trim();
+      const previousTenant = localStorage.getItem(this.ACTIVE_TENANT_KEY);
+      
+      // If switching tenants, purge prior session and cached state
+      if (previousTenant && previousTenant !== cleanSlug) {
+        localStorage.removeItem("currentSession");
+        localStorage.removeItem("medo_erp_state_v1");
+        localStorage.removeItem("medo_erp_current_user_v1");
+        localStorage.removeItem("medo_original_manager_session");
+        localStorage.removeItem("medo_erp_auth");
+        try { sessionStorage.clear(); } catch(e) {}
+      }
+
+      localStorage.setItem(this.ACTIVE_TENANT_KEY, cleanSlug);
+      sessionStorage.setItem(TENANT_SESSION_KEY, cleanSlug);
+
+      const matched = findTenantById(cleanSlug);
+      if (matched) {
+        localStorage.setItem("currentTenant", JSON.stringify(matched));
+        localStorage.setItem("companyName", matched.name || matched.companyNameAr);
+        localStorage.setItem("tenantName", matched.name || matched.companyNameAr);
+      } else if (tenantData) {
+        localStorage.setItem("currentTenant", JSON.stringify(tenantData));
+        localStorage.setItem("companyName", tenantData.name || tenantData.companyNameAr || cleanSlug);
+        localStorage.setItem("tenantName", tenantData.name || tenantData.companyNameAr || cleanSlug);
+      } else {
+        const customTenant = {
+          id: cleanSlug,
+          slug: cleanSlug,
+          name: localStorage.getItem("companyName") || cleanSlug,
+          companyNameAr: localStorage.getItem("companyName") || cleanSlug,
+        };
+        localStorage.setItem("currentTenant", JSON.stringify(customTenant));
+      }
+
+      // Dispatch event for UI components to re-render dynamically
+      try {
+        window.dispatchEvent(new CustomEvent("tenant_switched", { detail: { tenantId: cleanSlug } }));
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * Returns active tenant slug, prioritizing URL first, then localStorage
+   */
+  public static getActiveTenant(): string {
+    const urlTenant = this.getTenantIdFromUrl();
+    if (urlTenant) {
+      this.setActiveTenant(urlTenant);
+      return urlTenant;
+    }
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(this.ACTIVE_TENANT_KEY);
+      if (stored) return stored.toLowerCase().trim();
+    }
+    return "";
+  }
+
+  /**
+   * Clears active tenant from session/storage on logout
+   */
+  public static clearActiveTenant(): void {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(this.ACTIVE_TENANT_KEY);
+      localStorage.removeItem("currentTenant");
+      localStorage.removeItem("companyName");
+      localStorage.removeItem("tenantName");
+    }
+  }
+
+  /**
+   * Creates a new tenant and returns its unique access URL
+   */
+  public static createTenant(tenantData: {
+    nameAr: string;
+    nameEn?: string;
+    email?: string;
+    phone?: string;
+    industry?: string;
+  }): { tenantSlug: string; accessUrl: string; tenantObject: any } {
+    const rawSlug = tenantData.nameEn || tenantData.nameAr;
+    const cleanSlug = rawSlug
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || `tenant-${Date.now()}`;
+
+    const newTenant = {
+      id: cleanSlug,
+      slug: cleanSlug,
+      name: tenantData.nameAr,
+      nameEn: tenantData.nameEn || tenantData.nameAr,
+      companyNameAr: tenantData.nameAr,
+      companyNameEn: tenantData.nameEn || tenantData.nameAr,
+      phone: tenantData.phone || "+967 773 586 047",
+      email: tenantData.email || "",
+      industry: tenantData.industry || "تجارة عامة واستيراد",
+      status: "ACTIVE",
+      createdAt: new Date().toISOString(),
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const existingReg = localStorage.getItem("medo_registered_tenants");
+        const list = existingReg ? JSON.parse(existingReg) : [];
+        list.push(newTenant);
+        localStorage.setItem("medo_registered_tenants", JSON.stringify(list));
+      } catch (e) {
+        console.warn("Failed to persist new tenant in local registry", e);
+      }
+    }
+
+    const accessUrl = `https://medo-erp-cloud.vercel.app/?tenant=${cleanSlug}`;
+
+    return {
+      tenantSlug: cleanSlug,
+      accessUrl,
+      tenantObject: newTenant,
+    };
+  }
 
   /**
    * Resolves the current tenant slug from URL query, active session, hostnames, or storage
    */
   public static resolveActiveTenant(): string {
-    if (typeof window !== "undefined" && window.location) {
-      const search = window.location.search || "";
-      const urlParams = new URLSearchParams(search);
+    const urlTenant = this.getTenantIdFromUrl();
+    if (urlTenant) {
+      this.setActiveTenant(urlTenant);
+      return urlTenant;
+    }
 
-      // 1. Check query param: ?tenant=company-1 or ?client=alzarqa or ?company=bin-ziad
-      const clientParam = urlParams.get("tenant") || urlParams.get("client") || urlParams.get("company");
-      if (clientParam) {
-        const cleanSlug = clientParam.toLowerCase().trim();
-        const matched = findTenantById(cleanSlug);
-        const resolvedSlug = matched ? matched.id : cleanSlug;
-
-        // Clean any conflicting caches when explicitly opening a specific tenant
-        this.setActiveTenant(resolvedSlug);
-
-        if (matched) {
-          const tenantName = matched.name || matched.companyNameAr;
-          localStorage.setItem('currentTenant', JSON.stringify(matched));
-          localStorage.setItem('companyName', tenantName);
-          localStorage.setItem('tenantName', tenantName);
-          localStorage.setItem('mdo_print_header_ar', tenantName);
-          localStorage.setItem('mdo_print_header_en', matched.nameEn || matched.companyNameEn || matched.name);
-          localStorage.setItem('mdo_print_phone', matched.phone || matched.assignedAdminPhone || "+967 773 586 047");
-          localStorage.setItem('mdo_print_tax_reg', `س.ت: ${matched.crNumber || matched.commercialReg || "CR-2026"} | ضريبي: ${matched.taxNumber || "300748291000003"}`);
-          return matched.id;
-        }
-
-        localStorage.setItem('companyName', 'شركة جديدة');
-        localStorage.setItem('tenantName', 'شركة جديدة');
-        return resolvedSlug;
-      }
-
-      // If user navigated to the main root platform without tenant query parameters:
-      // Clear tenant persistence so it never leaks client branding into the Master Platform
-      if (!clientParam) {
-        localStorage.removeItem("currentTenant");
-        localStorage.removeItem(this.ACTIVE_TENANT_KEY);
-        localStorage.removeItem("companyName");
-        localStorage.removeItem("tenantName");
-        return "";
-      }
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(this.ACTIVE_TENANT_KEY);
+      if (stored) return stored.toLowerCase().trim();
     }
 
     return "";
@@ -829,19 +1016,6 @@ export class TenantIsolationService {
       console.error("Error parsing employee from URL:", e);
     }
     return null;
-  }
-
-  /**
-   * Sets the active tenant slug
-   */
-  public static setActiveTenant(tenantSlug: string): void {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(this.ACTIVE_TENANT_KEY, tenantSlug);
-      const matched = findTenantById(tenantSlug);
-      if (matched) {
-        localStorage.setItem("currentTenant", JSON.stringify(matched));
-      }
-    }
   }
 
   /**
